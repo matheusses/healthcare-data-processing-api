@@ -1,0 +1,178 @@
+# ==========================================
+# OpenTelemetry Collector Configuration
+# ==========================================
+# The OTel Collector is the central telemetry hub. It receives traces, metrics,
+# and logs from the healthcare-api service (via OTLP), applies processing, and
+# fans out to the appropriate backends: Tempo (traces), Prometheus (metrics),
+# and Loki (logs).
+#
+# Data flow:
+#   healthcare-api → otelcol (4317/4318) → Tempo / Prometheus / Loki
+
+# ------------------------------------------
+# Extensions
+# ------------------------------------------
+# Extensions add non-pipeline capabilities (health checks, profiling, etc.)
+extensions:
+  health_check:
+    # HTTP endpoint for liveness probes (e.g. Docker healthcheck, k8s probes)
+    # GET http://otelcol:13133 returns 200 when the collector is ready
+    endpoint: 0.0.0.0:13133
+
+# ------------------------------------------
+# Receivers
+# ------------------------------------------
+# Receivers are the entry points for telemetry data.
+receivers:
+  otlp:
+    protocols:
+      # gRPC OTLP — used by the healthcare-api SDK exporter (port 4317)
+      grpc:
+        endpoint: 0.0.0.0:4317
+      # HTTP OTLP — alternative for clients that prefer HTTP/JSON (port 4318)
+      http:
+        endpoint: 0.0.0.0:4318
+
+# ------------------------------------------
+# Processors
+# ------------------------------------------
+# Processors transform or filter data between receivers and exporters.
+# Order matters: memory_limiter must run first to protect the collector.
+processors:
+  memory_limiter:
+    # Checks memory usage every 5 seconds
+    check_interval: 5s
+    # Hard limit: collector starts dropping data if RSS exceeds 512 MiB
+    limit_mib: 512
+    # Spike buffer: starts soft-refusing new data 128 MiB before the hard limit
+    spike_limit_mib: 128
+
+  batch:
+    # Flushes a batch after this timeout even if send_batch_size isn't reached
+    timeout: 5s
+    # Flushes immediately once this many spans/data points are accumulated
+    send_batch_size: 1024
+
+  resource:
+    # Enriches every telemetry signal with consistent resource attributes.
+    # These appear as labels in Prometheus and as fields in Loki/Tempo,
+    # enabling cross-signal correlation in Grafana.
+    attributes:
+      - action: upsert
+        key: service.name
+        value: healthcare-api       # Identifies the service in all backends
+      - action: upsert
+        key: service.namespace
+        value: backend              # Groups the service within a namespace
+      - action: upsert
+        key: deployment.environment
+        value: local                # Tags signals with the current environment
+  # Associating logs and metrics with trace_id:
+  #
+  # 1. **Tracing correlation**:
+  #    The OpenTelemetry Collector can automatically add trace_id and span_id fields to logs (and in some cases, metrics)
+  #    when the source (your application) propagates them in OTLP payloads and the collector is correctly configured.
+  #
+  # 2. **For logs**: Use the [attributes processor](https://opentelemetry.io/docs/collector/configuration/#attributes-processor)
+  #    to copy trace_id/span_id as resource or log record attributes—if they aren't automatically present.
+  #    Example (no-op if your app already attaches context via OTLP):
+  #
+  # attributes/log_correlation:
+  #   actions:
+  #     - action: insert
+  #       key: trace_id
+  #       from_attribute: trace_id
+  #     - action: insert
+  #       key: span_id
+  #       from_attribute: span_id
+  #
+  # 3. **For metrics**: Metrics correlation to traces is limited by OTEL spec: "exemplar" support is needed,
+  #    and only some backends (like Tempo/Prometheus/Grafana stack) leverage these automatically. 
+  #
+  # 4. **End-to-end requirements**:
+  #    - Your application must inject and export trace/span context with logs and traces (as in your Python observability setup),
+  #      so the OTLP payloads received by the collector include these fields.
+  #    - The collector simply forwards these fields if present, or you can use attribute processors (as above) to enforce/copy/rename.
+  #
+  # 5. **To wire the processor into the pipeline**, add it to the `processors` section and include it in the relevant pipelines:
+  #
+  #   processors:
+  #     ...
+  #     attributes/log_correlation:
+  #       actions:
+  #         - action: insert
+  #           key: trace_id
+  #           from_attribute: trace_id
+  #         - action: insert
+  #           key: span_id
+  #           from_attribute: span_id
+  #
+  #   service:
+  #     pipelines:
+  #       logs:
+  #         receivers: [otlp]
+  #         processors: [memory_limiter, resource, attributes/log_correlation, batch]
+  #         exporters: [debug, otlphttp/loki]
+  #
+  # 6. **Security**: Do not copy or log trace/span IDs if they could be considered sensitive in your environment (rare).
+  #
+  # See also:
+  #   - https://opentelemetry.io/docs/collector/next/processors/attributes/
+  #   - https://grafana.com/docs/tempo/latest/trace-to-logs/
+  #   - https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/attributesprocessor
+
+
+# ------------------------------------------
+# Exporters
+# ------------------------------------------
+# Exporters send processed telemetry to the appropriate backends.
+exporters:
+  # Prints a summary of received telemetry to collector stdout — useful for
+  # debugging what the API is actually sending
+  debug:
+    verbosity: normal
+
+  # Exposes OTLP metrics as Prometheus scrape endpoint on port 8889.
+  # Prometheus is configured to scrape this endpoint (see prometheus.yml).
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+  # Forwards traces to Tempo over gRPC OTLP (port 4317 on the tempo container).
+  # TLS disabled since both services are on the same Docker internal network.
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Forwards logs to Loki via OTLP HTTP (Loki 2.9+ native OTLP ingestion).
+  # This is the modern approach — avoids the Promtail sidecar entirely.
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+# ------------------------------------------
+# Service
+# ------------------------------------------
+# Wires extensions and processors/exporters into active pipelines.
+service:
+  extensions: [health_check]
+
+  pipelines:
+    # Traces: receive → process → send to Tempo
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [debug, otlp/tempo]
+
+    # Metrics: receive → process → expose to Prometheus scraper
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [debug, prometheus]
+
+    # Logs: receive → process → send to Loki
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [debug, otlphttp/loki]

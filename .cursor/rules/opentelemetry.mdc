@@ -1,0 +1,25 @@
+---
+alwaysApply: true
+---
+
+OpenTelemetry Conventions
+
+When implementing observability, follow OpenTelemetry best practices for metrics, logs, and traces. Consider the observability-expert skill for tracing, metrics, logging, exporters, and distributed systems visibility. Use /opentelemetry or @opentelemetry in Agent chat for full skill behavior.
+
+Instrument services using OpenTelemetry SDK (auto-instrumentation when possible).
+
+Propagate trace context across services (W3C Trace Context).
+
+Avoid logging sensitive data (PII/PHI).
+
+Use structured logging (JSON format preferred).
+
+Correlate logs with trace IDs.
+
+Expose metrics in Prometheus-compatible format.
+
+Define SLO-based metrics (latency, error rate, throughput).
+
+Avoid high-cardinality labels in metrics.
+
+Ensure trace sampling strategy is environment-aware.

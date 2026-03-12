@@ -1,0 +1,116 @@
+# --- Environment & secrets (never commit) ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+*.secret
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- Testing & coverage ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.cover
+*.py,cover
+.hypothesis/
+
+# --- Type checkers & linters ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# --- IDEs & editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+
+
+# --- Logs & local data ---
+*.log
+logs/
+*.sqlite
+*.db
+!*.example.db
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Distribution / packaging ---
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Alembic (optional: ignore generated migrations if not desired; remove to track) ---
+# alembic/versions/*.pyc
+
+# --- Local observability / dev data ---
+observability/data/
+*.trace
+*.span
+
+# venv  
+.venv/
+venv/
+ENV/
+env/
+
+#python
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.pyzwz
+*.pyzwzw
+*.pyzwzwzw
+*.pyzwzwzwzw
+.pytest_cache/
+.python-version
+.ruff_cache/

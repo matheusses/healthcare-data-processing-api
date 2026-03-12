@@ -1,0 +1,74 @@
+# --- Git & VCS ---
+.git
+.gitignore
+.gitattributes
+
+# --- Environment & secrets (never in image) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Python cache & venv ---
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.venv
+venv
+ENV
+env
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# --- Testing (not needed in runtime image) ---
+tests/
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# --- Docs & dev tooling (optional: remove if image needs docs) ---
+docs/
+.agents/
+.cursor/
+*.md
+!README.md
+
+# --- IDE & OS ---
+.idea
+.vscode
+.DS_Store
+*.swp
+*.swo
+
+# --- Build & dist (rebuilt in Docker) ---
+build
+dist
+*.egg-info
+*.egg
+
+# --- Logs & local data ---
+*.log
+logs
+*.sqlite
+*.db
+
+# --- Docker ---
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# --- CI/CD (not needed inside image) ---
+.github
+.gitlab-ci.yml
+.circleci
+.travis.yml
+Jenkinsfile
+
+# --- Observability configs (include only if you copy them in Dockerfile) ---
+# observability/

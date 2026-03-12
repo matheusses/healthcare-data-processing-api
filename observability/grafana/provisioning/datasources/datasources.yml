@@ -1,0 +1,101 @@
+# ==========================================
+# Grafana - Datasource Provisioning
+# ==========================================
+# This file is loaded automatically by Grafana on startup from the path:
+#   /etc/grafana/provisioning/datasources/
+# It provisions all observability datasources so no manual UI configuration
+# is needed. Changes here take effect after a Grafana restart.
+
+apiVersion: 1
+
+datasources:
+  # ------------------------------------------
+  # Prometheus — Metrics
+  # ------------------------------------------
+  # Source of application metrics scraped from the OTel Collector exporter.
+  # Used in Grafana dashboards for RED metrics (rate, errors, duration)
+  # and in Tempo's service map to display request rates between services.
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus           # Stable UID referenced by other datasources (e.g. Tempo serviceMap)
+    url: http://prometheus:9090
+    access: proxy             # Grafana backend proxies requests — browser never calls Prometheus directly
+    isDefault: true           # Selected by default in Explore and new panels
+    jsonData:
+      httpMethod: POST        # POST supports larger PromQL queries than GET
+
+  # ------------------------------------------
+  # Loki — Logs
+  # ------------------------------------------
+  # Receives structured logs from the OTel Collector via OTLP HTTP.
+  # Logs include trace_id/span_id (JSON) for correlation with Tempo traces.
+  - name: Loki
+    type: loki
+    uid: loki
+    url: http://loki:3100
+    access: proxy
+    jsonData:
+      derivedFields:
+        # Log → Trace: extract trace_id from JSON log lines for a clickable link to Tempo.
+        - datasourceUid: tempo
+          matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+          name: TraceID
+          url: "$${__value.raw}"
+
+  # ------------------------------------------
+  # Tempo — Traces
+  # ------------------------------------------
+  # Distributed tracing backend. Receives traces from the OTel Collector
+  # and exposes TraceQL search used in Grafana Explore → Traces.
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    url: http://tempo:3200
+    access: proxy
+    jsonData:
+      httpMethod: GET
+      # Derive Prometheus → Tempo: use Prometheus for service map and "Metrics for this span".
+      # serviceMap: overlays RED metrics from Prometheus onto the trace service graph.
+      serviceMap:
+        datasourceUid: prometheus
+      # tracesToMetrics: from a span, "Metrics for this span" runs Prometheus queries.
+      # Requires GF_FEATURE_TOGGLES_ENABLE=traceToMetrics (see docker-compose).
+      # Tags map span attributes to Prometheus labels; use inline list format for provisioning.
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: Throughput
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m])) by (service)'
+          - name: Error rate
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags, status_code="STATUS_CODE_ERROR"}[5m])) by (service)'
+          - name: Error ratio
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags, status_code="STATUS_CODE_ERROR"}[5m])) by (service) / sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m])) by (service)'
+          - name: "Latency (p99)"
+            query: 'histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])) by (le, service))'
+      # Node graph: renders the dependency graph between services from trace data
+      nodeGraph:
+        enabled: true
+      # Trace query time shift: expands the search window around a trace's
+      # start/end time to account for clock skew between services
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: "1h"
+        spanEndTimeShift: "-1h"
+      # Span bar: displays http.path as a secondary label on span bars in the
+      # trace view, making it easier to identify which endpoint each span hit
+      spanBar:
+        type: Tag
+        tag: http.path
+      # Log relation by trace_id: "Logs for this span" queries Loki for logs with this trace ID.
+      lokiSearch:
+        datasourceUid: loki
+      tracesToLogsV2:
+        datasourceUid: loki
+        customQuery: true
+        # LogQL: parse JSON and filter by trace_id so logs correlate with the current span.
+        query: '{} | json | trace_id="$${__span.traceId}"'

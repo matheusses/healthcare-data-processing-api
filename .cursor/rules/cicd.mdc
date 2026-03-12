@@ -1,0 +1,25 @@
+---
+alwaysApply: false
+---
+
+CI/CD Conventions
+
+When editing pipelines, infrastructure automation, or deployment workflows, follow modern CI/CD and DevOps best practices. Consider the cicd-expert skill for GitHub Actions, GitLab CI, Docker, Kubernetes, Terraform, and release strategies. Use /cicd or @cicd in Agent chat for full skill behavior.
+
+Use trunk-based development or well-defined Git flow.
+
+All PRs must run automated tests, linting, and security checks.
+
+Enforce formatting (black, isort, flake8/ruff) before merge.
+
+Build Docker images with multi-stage builds.
+
+Tag images using immutable versioning (commit SHA or semantic version).
+
+Avoid secrets in pipelines — use secure secret managers.
+
+Use environment promotion strategy (dev → staging → prod).
+
+Prefer infrastructure-as-code (Terraform) over manual changes.
+
+Include rollback strategy in deployment design.

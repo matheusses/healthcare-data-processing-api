@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "ci-cd": {
+      "source": "ahmedasmar/devops-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8b217ce3ef24222197d651ad750b15c51a71e705e9a71a4cea016ba1d035907e"
+    },
+    "fastapi": {
+      "source": "tiangolo/fastapi",
+      "sourceType": "github",
+      "computedHash": "ee23d5285caf055cf164ff45dd34888d381143564666baacab8aa786f22e413a"
+    },
+    "opentelemetry": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "0c6bb77303278c9b829e37f6597aeffe44b8bf0cb7dcbdaff382877a6820401c"
+    }
+  }
+}

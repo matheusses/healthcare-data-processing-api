@@ -1,0 +1,8 @@
+Generic single-database configuration with async support.
+
+Migrations use DATABASE_URL from environment (see app.config.Settings).
+Run from project root:
+
+  uv run alembic upgrade head   # apply all migrations
+  uv run alembic revision --autogenerate -m "description"  # generate new revision
+  uv run alembic downgrade -1   # rollback one revision

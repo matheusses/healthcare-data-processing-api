@@ -1,0 +1,122 @@
+# ==========================================
+# Grafana Loki - Single Binary Configuration
+# ==========================================
+# Loki is the log aggregation backend. It receives structured logs from the
+# OTel Collector (via OTLP HTTP), indexes them using TSDB, and exposes a
+# LogQL query API consumed by Grafana.
+# This config runs all Loki components in a single process (monolithic mode).
+
+# Disable multi-tenant authentication — all logs go to the "fake" tenant.
+# Set to true and pass X-Scope-OrgID headers for multi-tenant deployments.
+auth_enabled: false
+
+# HTTP port for Grafana datasource and LogQL queries (e.g. /loki/api/v1/query)
+# gRPC port is used for internal component communication
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info,error
+
+# ------------------------------------------
+# Common
+# ------------------------------------------
+# Shared defaults applied to all components running in this single process.
+common:
+  # Loopback address used for ring self-registration in single-node mode
+  instance_addr: 127.0.0.1
+  # Base path for all Loki data directories on the container filesystem
+  path_prefix: /loki
+  # replication_factor=1: no redundancy; safe for local/dev use.
+  # Increase for HA deployments with multiple ingesters.
+  replication_factor: 1
+
+  ring:
+    # inmemory: single-node KV store, no external coordination needed.
+    # Use memberlist or etcd for multi-node deployments.
+    kvstore:
+      store: inmemory
+
+  storage:
+    filesystem:
+      # Where Loki stores compressed log chunks
+      chunks_directory: /loki/chunks
+      # Where Loki stores alerting/recording rules (if any)
+      rules_directory: /loki/rules
+
+# ------------------------------------------
+# Limits
+# ------------------------------------------
+# Per-tenant (or global in single-tenant mode) resource and feature limits.
+limits_config:
+  # Logs older than 7 days are eligible for deletion by the compactor
+  retention_period: 168h
+  # Allow ingesting OTel-style structured metadata alongside log lines
+  allow_structured_metadata: true
+  # Enable the /loki/api/v1/index/volume endpoint (used by Grafana log volume panel)
+  volume_enabled: true
+  # Enable metric aggregation over log streams (LogQL metric queries)
+  metric_aggregation_enabled: true
+  # Allow queries that fan out across multiple schema versions simultaneously
+  enable_multi_variant_queries: true
+  # Max number of sub-queries executed in parallel per query
+  max_query_parallelism: 32
+
+# ------------------------------------------
+# Schema (TSDB - Recommended)
+# ------------------------------------------
+# Defines how Loki indexes log streams. Schema v13 with TSDB is the current
+# recommended configuration — faster queries and lower memory than BoltDB.
+schema_config:
+  configs:
+    - from: "2024-01-01"    # Effective date for this schema version
+      store: tsdb           # Index store: TSDB (replaces legacy boltdb-shipper)
+      object_store: filesystem
+      schema: v13           # Latest schema — required for structured metadata
+      index:
+        prefix: index_      # Filename prefix for index files
+        period: 24h         # One index file per day
+
+# ------------------------------------------
+# Storage
+# ------------------------------------------
+# Low-level storage paths used by the TSDB shipper and chunk filesystem.
+storage_config:
+  tsdb_shipper:
+    # Where TSDB writes the active (in-memory) index before shipping
+    active_index_directory: /loki/tsdb-index
+    # Local cache for shipped TSDB index files (speeds up queries)
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    # Must match common.storage.filesystem.chunks_directory
+    directory: /loki/chunks
+
+# ------------------------------------------
+# Compactor (Required for retention)
+# ------------------------------------------
+# The compactor merges index files and enforces the retention_period by
+# deleting chunks and index entries older than the configured limit.
+# Without this, old logs accumulate and are never deleted.
+compactor:
+  working_directory: /loki/compactor
+  # How often the compactor runs a compaction + retention pass
+  compaction_interval: 10m
+  # Must be true for retention_period to take effect
+  retention_enabled: true
+  # Stores pending delete requests on the filesystem (matches storage backend)
+  delete_request_store: filesystem
+
+# ------------------------------------------
+# Query Scheduler (Optional but Recommended)
+# ------------------------------------------
+# Queues and distributes LogQL queries across querier workers.
+# Prevents slow queries from blocking fast ones.
+query_scheduler:
+  # Max number of in-flight queries per tenant before new ones are rejected
+  max_outstanding_requests_per_tenant: 2048
+
+# ------------------------------------------
+# Analytics (Disable telemetry)
+# ------------------------------------------
+analytics:
+  # Opt out of anonymous usage reporting to Grafana Labs
+  reporting_enabled: false

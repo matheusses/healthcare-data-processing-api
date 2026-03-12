@@ -1,0 +1,25 @@
+---
+alwaysApply: true
+---
+
+FastAPI Conventions
+
+When editing FastAPI services, follow FastAPI and modern Python backend best practices. Consider the fastapi-expert skill for routers, dependency injection, Pydantic models, async patterns, validation, security, and performance. Use /fastapi or @fastapi in Agent chat for full skill behavior.
+
+Prefer APIRouter with clear domain-based module separation.
+
+Use Pydantic models for request/response validation (never raw dicts).
+
+Keep business logic outside routers (use service/use-case layer).
+
+Use dependency injection (Depends) for auth, db sessions, and cross-cutting concerns.
+
+Prefer async endpoints when using async-compatible libraries.
+
+Standardize error handling with global exception handlers.
+
+Keep OpenAPI documentation clean with proper response models and status codes.
+
+Avoid blocking I/O inside async endpoints.
+
+Use settings management via BaseSettings (12-factor style).

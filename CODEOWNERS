@@ -1,0 +1,13 @@
+# CODEOWNERS — ownership and review for Healthcare Data Processing API
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for the entire repository (replace with your team/contact)
+*       @your-org/healthcare-api-maintainers
+
+# Critical paths — require review from security/backend
+/app/                    @your-org/healthcare-api-maintainers
+/docs/adr/               @your-org/healthcare-api-maintainers
+CODEOWNERS              @your-org/healthcare-api-maintainers
+
+# Security contact for responsible disclosure (replace with actual contact)
+# SECURITY.md or security policy URL can be added; CODEOWNERS indicates ownership.

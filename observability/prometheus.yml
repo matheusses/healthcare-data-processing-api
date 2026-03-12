@@ -1,0 +1,18 @@
+# ==========================================
+# Prometheus - Scrape Configuration
+# ==========================================
+# Prometheus scrapes metrics from targets and also receives remote_write from Tempo.
+#
+# What you see in Prometheus:
+#   - scrape_* (e.g. scrape_duration_seconds, scrape_samples_scraped): Prometheus
+#     internal metrics about each scrape job; one series per target.
+#   - traces_spanmetrics_*: from Tempo metrics-generator (remote_write). Enable
+#     overrides.defaults.metrics_generator.processors: [..., span-metrics] in
+#     tempo.yml so throughput, error rate, and latency appear here.
+#   - otelcol target: metrics the API sends via OTLP (if any) plus collector exports.
+
+scrape_configs:
+  # OpenTelemetry Collector: OTLP metrics from the API (when sent) on port 8889.
+  - job_name: "otelcol"
+    static_configs:
+      - targets: ["otelcol:8889"]

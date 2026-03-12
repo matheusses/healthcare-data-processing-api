@@ -1,0 +1,139 @@
+# ==========================================
+# Grafana Tempo 2.6 - Single Binary Configuration
+# ==========================================
+# Tempo is the distributed tracing backend. It receives traces via OTLP,
+# stores them locally, and exposes a query API consumed by Grafana.
+# This config runs all Tempo components in a single process (monolithic mode).
+#
+# NOTE: Pinned to 2.6.0 intentionally.
+# Tempo 2.9+ introduced a "live-store" architecture that requires Kafka to
+# assign partitions to the live-store ring. Without Kafka, queryRangeRecent
+# and SearchRecent always return "empty ring" errors. Tempo 2.6 uses the
+# classic ingester ring which works correctly in single-node mode.
+
+# HTTP port for Grafana datasource and Tempo API queries (e.g. /api/traces)
+# gRPC port is used internally by querier workers to connect to query-frontend
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+# ------------------------------------------
+# Ingester
+# ------------------------------------------
+# The ingester buffers incoming trace data in memory (WAL-backed) before
+# flushing completed blocks to the storage backend.
+# In 2.6, the ingester ring is also the source for "recent" trace queries —
+# queryRangeRecent, SearchRecent, and SearchTags all go through this ring.
+ingester:
+  lifecycler:
+    # Use loopback address so the ingester registers itself in the local ring
+    address: 127.0.0.1
+    ring:
+      # inmemory: single-node KV store — no memberlist or etcd needed.
+      # Use memberlist for multi-node deployments.
+      kvstore:
+        store: inmemory
+      # replication_factor=1: no data redundancy; safe for local/dev use
+      replication_factor: 1
+    # How long to wait before leaving the ring on shutdown (0 = immediate)
+    final_sleep: 0s
+
+  # A trace is considered complete (ready to flush) after this idle period
+  trace_idle_period: 10s
+  # How often the ingester checks for blocks ready to flush
+  flush_check_period: 10s
+
+# ------------------------------------------
+# Distributor
+# ------------------------------------------
+# The distributor is the entry point for trace data. It receives spans from
+# the OTel Collector and fans them out to ingesters via the ring.
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        # Accepts traces from otelcol via gRPC on port 4317
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+# ------------------------------------------
+# Querier
+# ------------------------------------------
+# The querier executes search and TraceQL queries by reading from both
+# live ingesters (recent) and the storage backend (historical blocks).
+querier:
+  frontend_worker:
+    # Connects to query-frontend over gRPC to receive work
+    frontend_address: localhost:9095
+
+# ------------------------------------------
+# Metrics Generator
+# ------------------------------------------
+# TraceQL metrics functions (e.g. quantile_over_time) query recent data from
+# the metrics-generator ring. Without this section, Tempo returns:
+# "error finding generators ... empty ring".
+metrics_generator:
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  # Required by local-blocks processor. Without this traces WAL path,
+  # metrics-generator cannot initialize processors and span metrics won't be produced.
+  traces_storage:
+    path: /var/tempo/generator/traces
+
+# ------------------------------------------
+# Query Frontend
+# ------------------------------------------
+# The query-frontend splits large queries into sub-queries, queues them,
+# and merges results — improving concurrency and tail latency.
+query_frontend:
+  search:
+    # SLO: warn if a search query takes longer than 5s
+    duration_slo: 5s
+    # SLO: warn if throughput drops below ~1 GB/s
+    throughput_bytes_slo: 1.073741824e+09
+  trace_by_id:
+    # SLO: warn if trace lookup by ID takes longer than 5s
+    duration_slo: 5s
+
+# ------------------------------------------
+# Storage
+# ------------------------------------------
+# Defines where Tempo persists trace blocks and the WAL.
+storage:
+  trace:
+    # local: stores blocks on the container filesystem via a Docker volume.
+    # For production, replace with s3, gcs, or azure.
+    backend: local
+    local:
+      path: /var/tempo/traces
+    # Write-Ahead Log: spans are written here first so they survive a crash
+    # before being flushed into immutable blocks
+    wal:
+      path: /var/tempo/wal
+    # Worker pool for concurrent block reads during queries
+    pool:
+      max_workers: 100
+      queue_depth: 10000
+
+# ------------------------------------------
+# Overrides
+# ------------------------------------------
+# metrics_generator processors:
+#   - local-blocks: required for TraceQL metrics over recent traces.
+#   - span-metrics: generates traces_spanmetrics_calls_total and
+#     traces_spanmetrics_latency_* (remote_write to Prometheus) so
+#     throughput, error rate, and latency show up in Grafana/Prometheus.
+#   - service-graphs: generates service graph metrics for the Tempo service map.
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - local-blocks
+        - span-metrics
+        - service-graphs

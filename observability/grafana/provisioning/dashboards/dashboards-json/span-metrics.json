@@ -1,0 +1,60 @@
+{
+  "uid": "span-metrics",
+  "title": "Span metrics (Tempo → Prometheus)",
+  "tags": ["tempo", "prometheus", "span-metrics"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "type": "timeseries",
+      "title": "traces_spanmetrics_calls_total (throughput)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(traces_spanmetrics_calls_total[5m])) by (service)",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "type": "timeseries",
+      "title": "traces_spanmetrics_latency (p99)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service))",
+          "legendFormat": "{{service}} p99",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 8 },
+      "type": "stat",
+      "title": "Metric check: do traces_spanmetrics_* exist?",
+      "description": "If you see 'No data', ensure: (1) Tempo has span-metrics in overrides, (2) Tempo was restarted, (3) API traffic was sent, (4) wait 1–2 min for remote_write. In Explore, query by name: traces_spanmetrics_calls_total (Grafana may not list remote_write metrics in the dropdown until data exists).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "count(traces_spanmetrics_calls_total)",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    }
+  ]
+}
