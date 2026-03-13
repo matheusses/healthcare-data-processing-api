@@ -7,6 +7,8 @@
 # Critical paths — require review from security/backend
 /app/                    @your-org/healthcare-api-maintainers
 /app/notes/              @your-org/healthcare-api-maintainers
+/app/summary/            @your-org/healthcare-api-maintainers
+/app/chat/               @your-org/healthcare-api-maintainers
 /app/shared/storage/     @your-org/healthcare-api-maintainers
 /docs/adr/               @your-org/healthcare-api-maintainers
 /docs/notes-api.md       @your-org/healthcare-api-maintainers

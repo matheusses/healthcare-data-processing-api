@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     VECTOR_EMBEDDING_MODEL: str = "text-embedding-3-small"
     VECTOR_EMBEDDING_DIMENSIONS: int = 1536
     OPENAI_API_KEY: str = ""
+    OPENAI_SUMMARY_MODEL: str = "gpt-4o-mini"
+    OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
 

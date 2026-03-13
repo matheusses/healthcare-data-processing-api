@@ -27,3 +27,10 @@ class NoteListResponse(BaseModel):
 
     items: list[NoteResponse]
     total: int
+
+
+class NoteContentItem(BaseModel):
+    """Full text of a single note (from chunks), for summary/chat context."""
+
+    note_id: UUID
+    content: str = Field("", description="Full note text from chunks ordered by chunk index")

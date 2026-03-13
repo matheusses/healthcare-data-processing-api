@@ -6,7 +6,7 @@ Modular monolith API for **patients**, **medical notes** (SOAP), and **structure
 
 - **Architecture**: [ADR 001 — Modular Monolith](docs/adr/001-modular-monolith-architecture.md). Modules: Patients, Notes, Summary. Communication only via `client.py` and DTOs.
 - **Stack**: FastAPI, async SQLAlchemy (PostgreSQL/asyncpg), Pydantic, dependency-injector, OpenTelemetry.
-- **Endpoints**: `/patients/` (CRUD, list), `/patients/{patient_id}/notes/` (upload, list, delete).
+- **Endpoints**: `/patients/` (CRUD, list), `/patients/{patient_id}/notes/` (upload, list, delete), `GET /patients/{patient_id}/summary` (SOAP summary), `POST /patients/{patient_id}/chat` (Q&A over patient context).
 
 ## Setup
 
@@ -19,7 +19,7 @@ Modular monolith API for **patients**, **medical notes** (SOAP), and **structure
 ```bash
 uv sync
 cp .env.example .env
-# Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings.
+# Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings and for summary/chat (OPENAI_SUMMARY_MODEL, OPENAI_CHAT_MODEL).
 # For Docker Compose provisioning, you can also set MINIO_ROOT_USER and MINIO_ROOT_PASSWORD.
 ```
 
@@ -140,9 +140,10 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 - **Secrets**: Do not commit `.env` or any secrets. Use `.env.example` as reference only.
 - **Input validation**: All request bodies validated via Pydantic; string length and format constraints on DTOs.
 - **OWASP**: Least-privilege, no raw SQL from user input, structured error responses (no stack traces to client).
-- **PHI/PII**: Notes contain PHI; avoid logging note content or patient identifiers. Observability uses structured logs with trace IDs; do not log request bodies that include clinical text.
+- **PHI/PII**: Notes contain PHI; avoid logging note content or patient identifiers. Summary and chat responses may contain PHI; do not log full response bodies. Observability uses structured logs with trace IDs; do not log request bodies that include clinical text.
 - **Supply chain**: Dependencies managed with `uv`; run `uv sync` and keep `uv.lock` in version control.
 - **Notes and storage**: Document storage credentials (MinIO/S3) must not be committed; use env vars. Embedding pipeline is optional (set `OPENAI_API_KEY` to enable); vector data is stored in Postgres (pgvector).
+- **Summary and chat**: `OPENAI_API_KEY` is required for `GET /patients/{id}/summary` and `POST /patients/{id}/chat`. Optional `OPENAI_SUMMARY_MODEL` and `OPENAI_CHAT_MODEL` (default `gpt-4o-mini`). Enforce input size limits (e.g. message length) and do not expose API keys in responses or logs.
 
 **Security contact:** See [CODEOWNERS](CODEOWNERS) for ownership and responsible disclosure.
 
@@ -151,6 +152,7 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 - [ADR 001 — Modular Monolith Architecture](docs/adr/001-modular-monolith-architecture.md)
 - [Task 001 — Boilerplate implementation](docs/tasks/001-healthcare-api-boilerplate.md)
 - [Task 002 — Patient Notes API and vector storage](docs/tasks/002-patient-notes-api.md)
+- [Task 003 — Patient summary and chat](docs/tasks/003-patient-summary-generation.md)
 - [Notes API usage](docs/notes-api.md) (SOAP context and endpoints)
 
 ## License

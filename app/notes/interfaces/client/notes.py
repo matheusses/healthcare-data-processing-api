@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from uuid import UUID
 
-from app.shared.schemas.notes import NoteListResponse, NoteResponse
+from app.shared.schemas.notes import NoteContentItem, NoteListResponse, NoteResponse
 
 
 class INoteClient(ABC):
@@ -34,4 +34,9 @@ class INoteClient(ABC):
     @abstractmethod
     async def delete(self, note_id: UUID) -> None:
         """Delete note. Raises NotFoundException if not found."""
+        ...
+
+    @abstractmethod
+    async def get_note_contents_for_patient(self, patient_id: UUID) -> list[NoteContentItem]:
+        """Return full note text per note for a patient (for summary/chat context)."""
         ...

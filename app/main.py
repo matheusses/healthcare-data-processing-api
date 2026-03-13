@@ -7,9 +7,11 @@ from fastapi.responses import JSONResponse
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+from app.chat.router import router as chat_router
 from app.core.container import Container
 from app.notes.router import router as notes_router
 from app.patients.router import router as patients_router
+from app.summary.router import router as summary_router
 from app.shared.exceptions import DomainException, NotFoundException, UnexpectedException
 from app.shared.observability import configure_logging, setup_logger_provider, setup_tracer_provider
 
@@ -79,3 +81,5 @@ async def healthcheck():
 app.include_router(main_router)
 app.include_router(patients_router)
 app.include_router(notes_router)
+app.include_router(summary_router)
+app.include_router(chat_router)
