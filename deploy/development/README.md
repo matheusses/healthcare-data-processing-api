@@ -48,7 +48,30 @@ Then load the image into the cluster:
 - **kind:** `kind load docker-image healthcare-api:local`
 - **k3d:** `k3d image import healthcare-api:local -c <cluster-name>`
 
-## 3. Deploy the development overlay
+## 3. (Optional) Bring up the Observability stack
+
+The development overlay does **not** include the observability stack. The API ConfigMap points to `http://otelcol:4317`, so if you want traces, logs, and metrics in Grafana, bring up the observability tools **before** deploying the overlay.
+
+1. **Ensure the namespace exists** (development applies it via base; if you prefer to apply only observability first):
+   ```bash
+   kubectl apply -f deploy/base/namespace.yaml
+   ```
+
+2. **Apply the observability manifests** (OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana) from the k3s overlay:
+   ```bash
+   kubectl apply -f deploy/k3s/observability/
+   ```
+
+3. **Wait for the OpenTelemetry Collector** so the API can send OTLP on startup:
+   ```bash
+   kubectl wait -n healthcare-api deployment/otelcol --for=condition=available --timeout=120s
+   ```
+
+Then proceed to deploy the development overlay (step 4). The API will send traces and logs to `otelcol`, which forwards to Tempo and Loki; Prometheus scrapes metrics from the collector. To use Grafana, port-forward the service: `kubectl port-forward -n healthcare-api svc/grafana 3000:3000` and open [http://localhost:3000](http://localhost:3000).
+
+**Alternative:** For an all-in-one local stack (API + Postgres + MinIO + observability) in one command, use the [k3s overlay](../k3s/README.md): `kubectl apply -k deploy/k3s`.
+
+## 4. Deploy the development overlay
 
 From the repository root:
 
@@ -58,7 +81,7 @@ kubectl apply -k deploy/development
 
 This creates the `healthcare-api` namespace and deploys API, PostgreSQL, and MinIO with development config and secrets.
 
-## 4. Namespace
+## 5. Namespace
 
 All resources are in the **healthcare-api** namespace. Use `-n healthcare-api` or set the default namespace:
 
@@ -67,7 +90,7 @@ kubectl config set-context --current --namespace=healthcare-api
 kubectl get pods -n healthcare-api
 ```
 
-## 5. Post-deploy: migrations and access
+## 6. Post-deploy: migrations and access
 
 1. **Wait for Postgres:**
    ```bash
@@ -90,38 +113,22 @@ kubectl get pods -n healthcare-api
    ```
    - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## Observability
-
-The development API config already sends traces and logs to an OpenTelemetry Collector:
-
-- **OTEL_EXPORTER_OTLP_ENDPOINT**: `http://otelcol:4317`
-- **OTEL_SERVICE_NAME**: `healthcare-api`
-
-By default, **deploy/development** does not create the observability stack, so there is no `otelcol` service. The API will attempt to export telemetry; if otelcol is missing, the SDK typically fails gracefully (no crash, telemetry is dropped).
-
-### Adding the observability stack (optional)
-
-To get traces, metrics, and logs in Grafana when using the development overlay, apply the same observability manifests used by the k3s overlay (Loki, Prometheus, Tempo, OpenTelemetry Collector, Grafana) into the `healthcare-api` namespace:
-
-```bash
-# From repository root, after deploy/development is applied
-kubectl apply -f deploy/k3s/observability/ -n healthcare-api
-```
-
-Wait for the observability pods to be ready, then (optionally) port-forward Grafana:
-
-```bash
-kubectl port-forward -n healthcare-api svc/grafana 3000:3000
-```
-
-- **Grafana:** [http://localhost:3000](http://localhost:3000) (anonymous Admin; see **Observability** folder for dashboards)
-- The API will then send traces and logs to otelcol; Prometheus scrapes metrics from otelcol and the API.
-
-Details on the stack (Loki, Prometheus, Tempo, otelcol, Grafana) and troubleshooting are in [../k3s/README.md](../k3s/README.md).
-
-### Alternative: use the k3s overlay
-
-If you prefer a single command that includes observability, use the k3s overlay instead: `kubectl apply -k deploy/k3s`. See [../k3s/README.md](../k3s/README.md).
+4. **Download a file from MinIO** (e.g. patient note): port-forward MinIO, then use a presigned URL from the API with `curl` and the in-cluster Host header:
+   ```bash
+   kubectl port-forward -n healthcare-api svc/minio 9000:9000
+   ```
+   ```bash
+   curl -o notes.txt \
+     -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
+     "http://127.0.0.1:9000/patient-notes/notes/<object-key>?<presigned-query-string>"
+   ```
+   Example with a real presigned URL:
+   ```bash
+   curl -o notes.txt \
+     -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
+     "http://127.0.0.1:9000/patient-notes/notes/2138cf4d-7fc7-4245-b90d-7627283971ad/2026-03-13T03%3A31%3A00.333000%2B00%3A00.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260313%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260313T051326Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=61d4fc7949125a823d96fccb3a55f2620f6fac1331e19eb5215779d0c8db0c1e"
+   ```
+   Replace the URL with a presigned URL returned by the API for the object you want to download.
 
 ## Development vs k3s overlay
 

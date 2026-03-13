@@ -111,6 +111,8 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 
 **Dev vs production:** `docker-compose.override.yml` is applied by default (dev: app volume mount, `--reload`). For production-like settings without overrides, run `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`. See [Task 004](docs/tasks/004-containerization-and-deployment.md).
 
+**Kubernetes (k3s / kind / k3d):** For deployment on a local or remote cluster, use the Kustomize overlays in `deploy/`. See [Kubernetes deployment](deploy/README.md) for the base + overlays layout and [Development overlay](deploy/development/README.md) for prerequisites, image build/load, migrations, and port-forwarding.
+
 ### Containerized build, run, and test
 
 - **Build:** From the project root:
@@ -163,19 +165,21 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 
 ## Security
 
-- **Secrets**: Do not commit `.env` or any secrets. Use `.env.example` as reference only.
+- **Secrets**: Do not commit `.env` or any secrets. Use `.env.example` as reference only. Replace all default/placeholder values (e.g. `change-me`, `change_me`) before production; prefer a secret manager, sealed-secrets, or External Secrets in production.
 - **Input validation**: All request bodies validated via Pydantic; string length and format constraints on DTOs.
 - **OWASP**: Least-privilege, no raw SQL from user input, structured error responses (no stack traces to client).
 - **PHI/PII**: Notes contain PHI; avoid logging note content or patient identifiers. Summary and chat responses may contain PHI; do not log full response bodies. Observability uses structured logs with trace IDs; do not log request bodies that include clinical text.
 - **Supply chain**: Dependencies managed with `uv`; run `uv sync` and keep `uv.lock` in version control.
 - **Notes and storage**: Document storage credentials (MinIO/S3) must not be committed; use env vars. Embedding pipeline is optional (set `OPENAI_API_KEY` to enable); vector data is stored in Postgres (pgvector).
 - **Summary and chat**: `OPENAI_API_KEY` is required for `GET /patients/{id}/summary` and `POST /patients/{id}/chat`. Optional `OPENAI_SUMMARY_MODEL` and `OPENAI_CHAT_MODEL` (default `gpt-4o-mini`). Enforce input size limits (e.g. message length) and do not expose API keys in responses or logs.
+- **Kubernetes**: For cluster deployments, do not commit real secret values in overlay YAML; replace every `change-me` before production (see [deploy/README.md](deploy/README.md) and [deploy/development/README.md](deploy/development/README.md)).
 
 **Security contact:** See [CODEOWNERS](CODEOWNERS) for ownership and responsible disclosure.
 
 ## Documentation
 
 - [ADR 001 — Modular Monolith Architecture](docs/adr/001-modular-monolith-architecture.md)
+- [Task index](docs/tasks/README.md) — Task breakdowns and implementation notes
 - [Task 001 — Boilerplate implementation](docs/tasks/001-healthcare-api-boilerplate.md)
 - [Task 002 — Patient Notes API and vector storage](docs/tasks/002-patient-notes-api.md)
 - [Task 003 — Patient summary and chat](docs/tasks/003-patient-summary-generation.md)
@@ -183,6 +187,7 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 - [Monitoring and observability](docs/monitoring.md) (Prometheus, Grafana, SLO)
 - [Notes API usage](docs/notes-api.md) (SOAP context and endpoints)
 - [Kubernetes deployment](deploy/README.md) (base + development/production overlays)
+- [Development overlay (Kubernetes)](deploy/development/README.md) (k3s/kind/k3d, build/load image, migrations, port-forward)
 
 ## License
 
