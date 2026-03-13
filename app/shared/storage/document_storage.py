@@ -53,8 +53,9 @@ class DocumentStorageClient(IDocumentStorage):
 
     async def generate_pre_signed_url(self, storage_key: str) -> str:
         """Generate a pre-signed URL for a note content object."""
-        client = self._client()
-        return client.presigned_get_object(self._bucket, storage_key, expires=timedelta(hours=1))
+        return self._client.presigned_get_object(
+            self._bucket, storage_key, expires=timedelta(hours=1)
+        )
 
     async def delete(self, storage_key: str) -> None:
         """Remove object by storage key."""
