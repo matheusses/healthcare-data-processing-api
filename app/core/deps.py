@@ -12,8 +12,8 @@ from app.chat.service import ChatService
 from app.config import settings
 from app.notes.client import NoteClient
 from app.notes.interfaces.client.notes import INoteClient
-from app.notes.note_chunk_repository import NoteChunkRepository
-from app.notes.repository import NoteRepository
+from app.notes.repositories.note_chunk_repository import NoteChunkRepository
+from app.notes.repositories.note_repository import NoteRepository
 from app.notes.service import NoteService
 from app.patients.client import PatientClient
 from app.patients.interfaces.client.patients import IPatientClient

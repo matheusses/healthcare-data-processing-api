@@ -2,6 +2,27 @@
 
 Modular monolith API for **patients**, **medical notes** (SOAP), and **structured summaries**, with production-oriented observability (OpenTelemetry, Prometheus, Loki, Tempo, Grafana).
 
+## Overview
+
+- **Architecture**: [ADR 001 — Modular Monolith](docs/adr/001-modular-monolith-architecture.md). Modules: Patients, Notes, Summary. Communication only via `client.py` and DTOs.
+- **Stack**: FastAPI, async SQLAlchemy (PostgreSQL/asyncpg), Pydantic, dependency-injector, OpenTelemetry.
+- **Endpoints**: `/patients/` (CRUD, list), `/patients/{patient_id}/notes/` (upload, list, delete), `GET /patients/{patient_id}/summary` (SOAP summary), `POST /patients/{patient_id}/chat` (Q&A over patient context).
+- **How to run**: Use **[Setup](#setup)** then run with **Docker Compose** or **local** (`uv run fastapi dev`). Or use the **[Quick start (local Kubernetes)](#quick-start)** session: `make quick-start-local` (k3s/kind/k3d), then `make port-forward-api` to reach the API.
+
+## Prerequisites
+
+| Requirement | Purpose |
+|-------------|---------|
+| **Python 3.12+** | Runtime for the API and tooling. |
+| **[uv](https://docs.astral.sh/uv/)** | Package and venv management (`uv sync`, `uv run`). |
+| **Docker** | Local stack (Compose: API, Postgres, MinIO, observability); image build. |
+| **k3s** (or **kind** / **k3d**) | Kubernetes cluster for `make quick-start-local` and deploy overlays. |
+| **kubectl** | When using k3s/kind/k3d; set `CLUSTER=kind` or `CLUSTER=k3d` if not using k3s. |
+
+**Python version (pyenv):** This project pins 3.12 in `.python-version`. If you use [pyenv](https://github.com/pyenv/pyenv), run `pyenv install -s` in the repo to install the right interpreter; `pyenv local` is already set via `.python-version`.
+
+---
+
 ## Quick start
 
 From the repo root, run the full local flow (build, deploy, migrations), then expose the API:
@@ -22,17 +43,7 @@ Then open **http://localhost:8000/docs**. Prerequisites: k3s (or kind/k3d), kube
 
 ---
 
-## Overview
-
-- **Architecture**: [ADR 001 — Modular Monolith](docs/adr/001-modular-monolith-architecture.md). Modules: Patients, Notes, Summary. Communication only via `client.py` and DTOs.
-- **Stack**: FastAPI, async SQLAlchemy (PostgreSQL/asyncpg), Pydantic, dependency-injector, OpenTelemetry.
-- **Endpoints**: `/patients/` (CRUD, list), `/patients/{patient_id}/notes/` (upload, list, delete), `GET /patients/{patient_id}/summary` (SOAP summary), `POST /patients/{patient_id}/chat` (Q&A over patient context).
-
 ## Setup
-
-**Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/).
-
-**Python version (pyenv):** This project pins 3.12 in `.python-version`. If you use [pyenv](https://github.com/pyenv/pyenv), run `pyenv install -s` in the repo to install the right interpreter, then `pyenv local` is already set.
 
 **Install dependencies with uv:** uv uses your current Python (e.g. from pyenv) to create a venv and install from `pyproject.toml` + lockfile.
 

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.notes.repository import NoteRepository
+from app.notes.repositories.note_repository import NoteRepository
 from app.patients.repository import PatientRepository
 from app.shared.schemas.patients import PatientCreateRequest
 

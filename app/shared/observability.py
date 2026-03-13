@@ -11,6 +11,29 @@ This module configures:
 - **Structured logging**: structlog with JSON output and optional injection
   of trace_id/span_id from the current OpenTelemetry span context.
 
+Auto-instrumentation (OpenTelemetry instrumentors)
+-------------------------------------------------
+Instrumentors patch libraries so spans are created automatically. In this app:
+
+- **FastAPI**: applied in :mod:`app.main` via ``FastAPIInstrumentor.instrument_app(app)``
+  so each request gets a span and W3C Trace Context is propagated.
+- **Logging**: applied in :func:`configure_logging` via ``LoggingInstrumentor().instrument()``
+  so log records get trace context and can be correlated in the backend.
+- **SQLAlchemy**: applied in :mod:`app.shared.db.database` via ``SQLAlchemyInstrumentor().instrument(engine=...)``
+  when the engine is built so DB operations appear as child spans.
+- **HTTPX** (optional): applied in :func:`instrument_httpx` so outbound HTTP calls
+  (e.g. LLM APIs) are traced. Call once at startup after the TracerProvider is set.
+
+**LangSmith (LLM tracing):** When ``LANGSMITH_API_KEY`` is set, OpenTelemetry
+traces are also exported to LangSmith's OTEL endpoint (see :func:`setup_tracer_provider`),
+and :func:`configure_langsmith_tracing` enables LangChain native tracing so LLM
+runs (prompts, tokens, latency) appear in LangSmith alongside your app traces.
+
+To add more auto-instrumentation: install the corresponding
+``opentelemetry-instrumentation-<library>`` package and call
+``<Library>Instrumentor().instrument()`` **before** the library is used (e.g. at
+app startup). Use the global TracerProvider so all spans export to the same backend.
+
 All behavior is driven by :class:`app.config.Settings`; no endpoints, ports,
 or security options are hardcoded. OTLP paths follow the OpenTelemetry
 specification and are defined as module constants for consistency and tests.
@@ -57,6 +80,9 @@ OTLP_HTTP_LOGS_PATH = "/v1/logs"
 # Default OTLP ports: gRPC 4317, HTTP 4318 (used when normalizing base URLs).
 _DEFAULT_OTLP_GRPC_PORT = "4317"
 _DEFAULT_OTLP_HTTP_PORT = "4318"
+
+# LangSmith OTEL endpoint path (appended to LANGSMITH_ENDPOINT for trace export).
+LANGSMITH_OTEL_TRACES_PATH = "/otel/v1/traces"
 
 
 def _build_trace_export_endpoint(base_endpoint: str) -> str:
@@ -184,6 +210,50 @@ def _inject_trace_context_processor(
     return event_dict
 
 
+def configure_langsmith_tracing(settings: Settings | None = None) -> None:
+    """Enable LangChain/LangSmith native tracing so LLM runs appear in LangSmith.
+
+    When ``LANGSMITH_API_KEY`` is set and ``LANGSMITH_TRACING`` is True, sets
+    environment variables that LangChain reads so invocations (ainvoke, etc.)
+    are sent to LangSmith. Call once at startup, before any LangChain code runs.
+
+    OpenTelemetry spans are still exported separately via the LangSmith OTLP
+    exporter in :func:`setup_tracer_provider` when ``LANGSMITH_OTEL_EXPORT``
+    is True, giving both LangSmith run trees and unified OTEL traces.
+    """
+    if settings is None:
+        settings = Settings()
+    if not settings.LANGSMITH_API_KEY or not settings.LANGSMITH_TRACING:
+        return
+    import os
+
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
+    os.environ["LANGSMITH_API_KEY"] = settings.LANGSMITH_API_KEY
+    if settings.LANGSMITH_ENDPOINT:
+        os.environ["LANGSMITH_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
+    logging.getLogger(__name__).info(
+        "LangSmith tracing enabled for LangChain (runs will appear in LangSmith)."
+    )
+
+
+def instrument_httpx() -> None:
+    """Apply OpenTelemetry auto-instrumentation to httpx (outbound HTTP clients).
+
+    Call once at application startup, after the global TracerProvider is set.
+    Outbound requests (e.g. LLM APIs via langchain/httpx) will then be traced
+    as child spans. Safe to call even if httpx is not used yet.
+    """
+    try:
+        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+        HTTPXClientInstrumentor().instrument()
+    except ImportError:
+        logging.getLogger(__name__).debug(
+            "opentelemetry-instrumentation-httpx not installed; skipping httpx instrumentation."
+        )
+
+
 def _log_level_from_name(name: str) -> int:
     """Map LOG_LEVEL string to logging module constant (default INFO)."""
     level = (name or "INFO").strip().upper()
@@ -194,9 +264,12 @@ def configure_logging(settings: Settings | None = None) -> None:
     """Configure structlog and instrument standard logging for OTEL context.
 
     Ensures all log levels (info, warn, error, exception) are sent to OTLP/Loki
-    by setting the root logger and structlog filter to LOG_LEVEL from settings.
-    Default LOG_LEVEL=INFO captures INFO, WARNING, ERROR, CRITICAL and exceptions.
+    and appear on console by setting the root logger and structlog filter to
+    LOG_LEVEL from settings. Default LOG_LEVEL=INFO captures INFO, WARNING,
+    ERROR, CRITICAL and exceptions.
 
+    - Adds a StreamHandler (stderr) so error, warning, and exception logs
+      appear in the console; uses the same trace-aware JSON format as OTLP.
     - Injects OpenTelemetry context into the standard logging format when
       LoggingInstrumentor is used.
     - Adds trace_id/span_id to every structlog event when inside a recording span
@@ -208,9 +281,17 @@ def configure_logging(settings: Settings | None = None) -> None:
 
     LoggingInstrumentor().instrument(set_logging_format=True)
 
-    # Root logger: so all handlers (including OTLP LoggingHandler) receive
+    # Root logger: so all handlers (console + OTLP LoggingHandler) receive
     # logs at LOG_LEVEL and above (info, warn, error, exception).
-    logging.getLogger().setLevel(min_level)
+    root = logging.getLogger()
+    root.setLevel(min_level)
+
+    # Console handler so error, warning, and exception logs appear in stderr.
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(min_level)
+    console_handler.addFilter(_trace_context_filter)
+    console_handler.setFormatter(_TraceAwareJSONFormatter())
+    root.addHandler(console_handler)
 
     structlog.configure(
         processors=[
@@ -227,29 +308,6 @@ def configure_logging(settings: Settings | None = None) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
-
-
-def add_trace_context_to_logs(processor: Any) -> Any:
-    """Add trace_id and span_id to log records when in an active OTEL span.
-
-    Intended for use as a structlog processor or similar pipeline step so
-    that logs emitted within a trace automatically carry trace and span
-    identifiers for correlation in the backend.
-
-    Args:
-        processor: Next processor in the chain (pass-through).
-
-    Returns:
-        The same processor, for chaining.
-    """
-    span = trace.get_current_span()
-    if span.is_recording():
-        ctx = span.get_span_context()
-        structlog.contextvars.bind_contextvars(
-            trace_id=format(ctx.trace_id, "032x"),
-            span_id=format(ctx.span_id, "016x"),
-        )
-    return processor
 
 
 def setup_tracer_provider(settings: Settings) -> TracerProvider:
@@ -282,6 +340,20 @@ def setup_tracer_provider(settings: Settings) -> TracerProvider:
             logging.getLogger(__name__).info(
                 "OTLP trace exporter configured (HTTP): %s", trace_endpoint
             )
+
+    if settings.LANGSMITH_API_KEY and settings.LANGSMITH_OTEL_EXPORT:
+        langsmith_trace_endpoint = (
+            settings.LANGSMITH_ENDPOINT.rstrip("/") + LANGSMITH_OTEL_TRACES_PATH
+        )
+        langsmith_exporter = OTLPSpanExporter(
+            endpoint=langsmith_trace_endpoint,
+            headers={"x-api-key": settings.LANGSMITH_API_KEY},
+        )
+        provider.add_span_processor(BatchSpanProcessor(langsmith_exporter))
+        logging.getLogger(__name__).info(
+            "LangSmith OTLP trace exporter configured: %s",
+            settings.LANGSMITH_ENDPOINT.rstrip("/") + "/otel",
+        )
 
     trace.set_tracer_provider(provider)
     return provider
@@ -361,7 +433,7 @@ def _build_sampler(settings: Settings) -> Sampler:
 
     logging.getLogger(__name__).warning(
         "Unknown OTEL_TRACES_SAMPLER '%s'; using parentbased_traceidratio.",
-        settings.otel_traces_sampler,
+        settings.OTEL_TRACES_SAMPLER,
     )
     return ParentBased(root=TraceIdRatioBased(ratio))
 

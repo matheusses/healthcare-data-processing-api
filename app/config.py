@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
 
+     # LangSmith (LLM tracing and evaluation; optional)
+    # When set, OpenTelemetry traces are also exported to LangSmith and LangChain runs are sent there.
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_TRACING: bool = True  # Enable LangChain native tracing to LangSmith when API key is set
+    LANGSMITH_OTEL_EXPORT: bool = True  # Export OpenTelemetry spans to LangSmith OTEL endpoint when API key is set
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"  # LangSmith API base (use for self-hosted)
+
     # Allowed file extensions
     ALLOWED_CONTENT_TYPES: str = "text/plain, application/pdf, image/jpeg, image/jpg, image/png"
 
