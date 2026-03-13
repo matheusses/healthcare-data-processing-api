@@ -8,11 +8,29 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otelcol:4317
       OTEL_SERVICE_NAME: healthcare-api
       ENVIRONMENT: development
+      DOCUMENT_STORAGE_ENDPOINT: http://minio:9000
+      DOCUMENT_STORAGE_BUCKET: ${DOCUMENT_STORAGE_BUCKET:-patient-notes}
+      DOCUMENT_STORAGE_ACCESS_KEY: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
+      DOCUMENT_STORAGE_SECRET_KEY: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
     depends_on:
       postgres:
         condition: service_healthy
       otelcol:
         condition: service_started
+      minio:
+        condition: service_started
+
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
 
   postgres:
     image: postgres:16-alpine
@@ -96,6 +114,7 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:
   loki-data:
   prometheus-data:
   tempo-data:

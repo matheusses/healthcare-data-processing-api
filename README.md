@@ -6,7 +6,7 @@ Modular monolith API for **patients**, **medical notes** (SOAP), and **structure
 
 - **Architecture**: [ADR 001 — Modular Monolith](docs/adr/001-modular-monolith-architecture.md). Modules: Patients, Notes, Summary. Communication only via `client.py` and DTOs.
 - **Stack**: FastAPI, async SQLAlchemy (PostgreSQL/asyncpg), Pydantic, dependency-injector, OpenTelemetry.
-- **Endpoints**: `/patients/`, `/notes/`, `/summary/` with CRUD and list operations.
+- **Endpoints**: `/patients/` (CRUD, list), `/patients/{patient_id}/notes/` (upload, list, delete).
 
 ## Setup
 
@@ -19,7 +19,7 @@ Modular monolith API for **patients**, **medical notes** (SOAP), and **structure
 ```bash
 uv sync
 cp .env.example .env
-# Edit .env: set DATABASE_URL (PostgreSQL) and optionally OTEL_* for tracing.
+# Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings.
 ```
 
 For OTLP in local development:
@@ -55,7 +55,7 @@ uv run alembic downgrade -1
 uv run alembic upgrade head --sql
 ```
 
-`pg_trgm` is enabled by migration `656dcd0fa7a3` and is required for ranked fuzzy search on `/patients/`. If an environment cannot enable extensions, the API automatically falls back to `ILIKE`-based search (functional, but without trigram ranking/index acceleration).
+`pg_trgm` is enabled by migration `656dcd0fa7a3` and is required for ranked fuzzy search on `/patients/`. Migration `a1b2c3d4e5f6` creates the `notes` table; `b2c3d4e5f6a7` enables the `vector` extension and creates the `note_chunks` table (pgvector) for embedding storage. If an environment cannot enable extensions, adjust or skip the vector migration.
 
 **Security:** Never commit secrets in migration scripts. Use environment-based config only.
 
@@ -79,6 +79,8 @@ docker compose up -d
 ```
 
 The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `POSTGRES_USER` and `POSTGRES_DB=healthcare` so the default user exists (the image creates one role from `POSTGRES_USER`, not from the DB name).
+
+**MinIO (document storage):** With Docker Compose, MinIO runs on port 9000. Set `DOCUMENT_STORAGE_ENDPOINT`, `DOCUMENT_STORAGE_BUCKET`, `DOCUMENT_STORAGE_ACCESS_KEY`, and `DOCUMENT_STORAGE_SECRET_KEY` in `.env` (see `.env.example`). The API uses MinIO for file-backed note uploads (`POST /patients/{id}/notes/upload`).
 
 ### Observability troubleshooting
 
@@ -137,8 +139,9 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 - **Secrets**: Do not commit `.env` or any secrets. Use `.env.example` as reference only.
 - **Input validation**: All request bodies validated via Pydantic; string length and format constraints on DTOs.
 - **OWASP**: Least-privilege, no raw SQL from user input, structured error responses (no stack traces to client).
-- **PHI/PII**: Avoid logging sensitive data; observability uses structured logs with trace IDs.
+- **PHI/PII**: Notes contain PHI; avoid logging note content or patient identifiers. Observability uses structured logs with trace IDs; do not log request bodies that include clinical text.
 - **Supply chain**: Dependencies managed with `uv`; run `uv sync` and keep `uv.lock` in version control.
+- **Notes and storage**: Document storage credentials (MinIO/S3) must not be committed; use env vars. Embedding pipeline is optional (set `OPENAI_API_KEY` to enable); vector data is stored in Postgres (pgvector).
 
 **Security contact:** See [CODEOWNERS](CODEOWNERS) for ownership and responsible disclosure.
 
@@ -146,6 +149,8 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 
 - [ADR 001 — Modular Monolith Architecture](docs/adr/001-modular-monolith-architecture.md)
 - [Task 001 — Boilerplate implementation](docs/tasks/001-healthcare-api-boilerplate.md)
+- [Task 002 — Patient Notes API and vector storage](docs/tasks/002-patient-notes-api.md)
+- [Notes API usage](docs/notes-api.md) (SOAP context and endpoints)
 
 ## License
 

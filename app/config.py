@@ -28,4 +28,17 @@ class Settings(BaseSettings):
     # Fuzzy search
     pg_trgm_similarity_threshold: float = 0.2
 
+    # Document storage (MinIO / S3-compatible)
+    document_storage_endpoint: str = "http://localhost:9000"
+    document_storage_bucket: str = "patient-notes"
+    document_storage_access_key: str = "minioadmin"
+    document_storage_secret_key: str = "minioadmin"
+    document_storage_region: str = "us-east-1"
+    document_storage_secure: bool = False
+
+    # Vector / embeddings
+    vector_embedding_model: str = "text-embedding-3-small"
+    vector_embedding_dimensions: int = 1536
+    openai_api_key: str = ""
+
 settings = Settings()

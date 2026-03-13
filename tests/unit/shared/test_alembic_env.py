@@ -13,11 +13,18 @@ def test_base_metadata_includes_all_tables() -> None:
     """All ORM models are registered on Base.metadata for autogenerate."""
     table_names = set(Base.metadata.tables.keys())
     assert "patients" in table_names
+    assert "notes" in table_names
+    assert "note_chunks" in table_names
 
 
 def test_models_match_expected_tablenames() -> None:
     """ORM __tablename__ matches migration expectations."""
+    from app.shared.db.models.notes import NoteModel
+    from app.shared.db.models.note_chunks import NoteChunkModel
+
     assert PatientModel.__tablename__ == "patients"
+    assert NoteModel.__tablename__ == "notes"
+    assert NoteChunkModel.__tablename__ == "note_chunks"
 
 
 def test_initial_migration_file_exists() -> None:

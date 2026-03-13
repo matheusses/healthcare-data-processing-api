@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncGenerator
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import Settings
@@ -46,6 +47,8 @@ async def _tables(engine):
     """Function-scoped so it uses the default event loop (session-scoped async fixtures would need a session-scoped loop)."""
     try:
         async with engine.begin() as conn:
+            # pgvector required for note_chunks table
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
     except OSError as e:
         pytest.skip(f"Postgres unreachable for integration tests: {e}")
