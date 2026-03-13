@@ -13,11 +13,14 @@ class LLMClient(ILLMClient):
         self,
         api_key: str | None = None,
         model: str | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
     ) -> None:
         self._model = ChatOpenAI(
             model=model or settings.OPENAI_SUMMARY_MODEL,
             openai_api_key=api_key or settings.OPENAI_API_KEY,
-            temperature=0,
+            temperature=temperature if temperature is not None else settings.OPENAI_TEMPERATURE,
+            top_p=top_p if top_p is not None else settings.OPENAI_TOP_P,
         )
 
     async def invoke(self, system: str, user: str) -> str:

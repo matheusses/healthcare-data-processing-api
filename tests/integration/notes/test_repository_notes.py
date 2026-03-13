@@ -24,15 +24,15 @@ async def test_note_repository_crud(db_session):
 
     note_repo = NoteRepository(db_session)
     rec = datetime(2023, 10, 26, 12, 0, 0, tzinfo=timezone.utc)
+    storage_key = "patients/1/notes/1.txt"
     note = await note_repo.create(
         patient_id=patient.id,
         recorded_at=rec,
-        content="S: Check-up. O: Normal. A: Healthy. P: F/U 6 mo.",
-        storage_key=None,
+        storage_key=storage_key,
     )
     assert note.id is not None
     assert note.patient_id == patient.id
-    assert "Check-up" in note.content
+    assert note.storage_key == storage_key
 
     by_id = await note_repo.get_by_id(note.id)
     assert by_id is not None
@@ -40,12 +40,6 @@ async def test_note_repository_crud(db_session):
 
     notes_list = await note_repo.list_by_patient(patient.id, limit=10, offset=0)
     assert len(notes_list) == 1
-    count = await note_repo.count_by_patient(patient.id)
-    assert count == 1
-
-    updated = await note_repo.update_storage_key(note.id, "patients/1/notes/1.txt")
-    assert updated is not None
-    assert updated.storage_key == "patients/1/notes/1.txt"
 
     deleted = await note_repo.delete(note.id)
     assert deleted is True

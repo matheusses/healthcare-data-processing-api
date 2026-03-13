@@ -20,6 +20,8 @@ data:
   VECTOR_EMBEDDING_DIMENSIONS: "1536"
   OPENAI_SUMMARY_MODEL: "gpt-4o-mini"
   OPENAI_CHAT_MODEL: "gpt-4o-mini"
+  OPENAI_TEMPERATURE: "0"
+  OPENAI_TOP_P: "5"
   PG_TRGM_SIMILARITY_THRESHOLD: "0.2"
   ALLOWED_CONTENT_TYPES: "text/plain, application/pdf, image/jpeg, image/jpg, image/png"
 ---

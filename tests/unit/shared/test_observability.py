@@ -37,8 +37,8 @@ def test_build_log_export_endpoint_appends_path() -> None:
 
 def test_build_sampler_uses_parent_based_ratio() -> None:
     settings = Settings(
-        otel_traces_sampler="parentbased_traceidratio",
-        otel_traces_sampler_arg="0.25",
+        OTEL_TRACES_SAMPLER="parentbased_traceidratio",
+        OTEL_TRACES_SAMPLER_ARG="0.25",
     )
     sampler = _build_sampler(settings)
 
@@ -49,8 +49,8 @@ def test_build_sampler_uses_parent_based_ratio() -> None:
 
 def test_build_sampler_clamps_invalid_ratio() -> None:
     settings = Settings(
-        otel_traces_sampler="traceidratio",
-        otel_traces_sampler_arg="8.0",
+        OTEL_TRACES_SAMPLER="traceidratio",
+        OTEL_TRACES_SAMPLER_ARG="8.0",
     )
     sampler = _build_sampler(settings)
 

@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from typing import Annotated, Literal
 
-from app.deps import get_patient_client
+from app.core.deps import get_patient_client
 from app.patients.interfaces.client.patients import IPatientClient
 from app.shared.schemas.patients import (
     PatientCreateRequest,

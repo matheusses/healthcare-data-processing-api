@@ -1,6 +1,5 @@
 """Integration test DB session, engine, fixtures."""
 
-import asyncio
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -12,19 +11,12 @@ from app.shared.db.database import Base
 
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def settings():
     return Settings()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def engine(settings):
     url = settings.database_url
     if "sqlite" in url or url == "postgresql+asyncpg://user:password@localhost:5432/healthcare":
@@ -32,7 +24,7 @@ def engine(settings):
     return create_async_engine(url, pool_pre_ping=True, echo=False)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def session_factory(engine):
     return async_sessionmaker(
         engine,

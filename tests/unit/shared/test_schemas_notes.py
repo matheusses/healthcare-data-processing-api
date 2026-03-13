@@ -40,20 +40,13 @@ def test_note_create_request_content_max_length():
 
 def test_note_response_from_attributes():
     uid = uuid.uuid4()
-    patient_id = uuid.uuid4()
     rec = datetime(2023, 10, 26, 12, 0, 0, tzinfo=timezone.utc)
-    created = datetime(2023, 10, 26, 13, 0, 0, tzinfo=timezone.utc)
     r = NoteResponse(
         id=uid,
-        patient_id=patient_id,
         recorded_at=rec,
-        content="SOAP note",
-        storage_key=None,
-        created_at=created,
     )
     assert r.id == uid
-    assert r.patient_id == patient_id
-    assert r.storage_key is None
+    assert r.recorded_at == rec
 
 
 def test_note_list_response():

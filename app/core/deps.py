@@ -53,8 +53,13 @@ async def get_note_client(
     document_storage = container.document_storage()
     document_extractor = container.document_extractor()
     note_repository = NoteRepository(session)
-    note_chunk_repository = NoteChunkRepository(session)
-    embedding_pipeline = EmbeddingPipeline(session)
+    embedding_pipeline = EmbeddingPipeline(
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP,
+        embedding_model=settings.VECTOR_EMBEDDING_MODEL,
+        openai_api_key=settings.OPENAI_API_KEY,
+    )
+    note_chunk_repository = NoteChunkRepository(session, embedding_pipeline)
     patient_client = await get_patient_client(request, session)
     service = NoteService(
         note_repository,
@@ -73,7 +78,7 @@ async def get_summary_client(
     """Build SummaryClient with patient client, note client, and SummaryLlm (OPENAI_SUMMARY_MODEL)."""
     patient_client = await get_patient_client(request, session)
     note_client = await get_note_client(request, session)
-    llm = LLMClient(model=settings.OPENAI_SUMMARY_MODEL)
+    llm = LLMClient(model=settings.OPENAI_SUMMARY_MODEL, temperature=settings.OPENAI_TEMPERATURE, top_p=settings.OPENAI_TOP_P)
     summary_llm = SummaryLlm(llm)
     service = SummaryService(patient_client, note_client, summary_llm)
     return SummaryClient(service)
@@ -85,7 +90,7 @@ async def get_chat_client(
     """Build ChatClient with patient client, note client, and PatientChatLlm (OPENAI_CHAT_MODEL)."""
     patient_client = await get_patient_client(request, session)
     note_client = await get_note_client(request, session)
-    llm = LLMClient(model=settings.OPENAI_CHAT_MODEL)
+    llm = LLMClient(model=settings.OPENAI_CHAT_MODEL, temperature=settings.OPENAI_TEMPERATURE, top_p=settings.OPENAI_TOP_P)
     chat_llm = PatientChatLlm(llm)
     service = ChatService(patient_client, note_client, chat_llm)
     return ChatClient(service)

@@ -33,6 +33,8 @@ class Settings(BaseSettings):
 
     # Fuzzy search
     PG_TRGM_SIMILARITY_THRESHOLD: float = 0.2
+    OPENAI_TEMPERATURE: float = 0
+    OPENAI_TOP_P: float = 1
 
     # Document storage (MinIO / S3-compatible)
     DOCUMENT_STORAGE_ENDPOINT: str = "http://localhost:9000"

@@ -32,8 +32,8 @@ class NoteClient(INoteClient):
     async def list_by_patient(self, patient_id: UUID, limit: int = 100, offset: int = 0) -> NoteListResponse:
         return await self._service.list_by_patient(patient_id, limit=limit, offset=offset)
 
-    async def generate_pre_signed_url(self, note_id: UUID) -> str:
-        return await self._service.generate_pre_signed_url(note_id)
+    async def download(self, note_id: UUID) -> str:
+        return await self._service.download(note_id)
 
     async def delete(self, note_id: UUID) -> None:
         await self._service.delete(note_id)

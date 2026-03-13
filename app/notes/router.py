@@ -1,12 +1,12 @@
 """APIRouter for /patients/{patient_id}/notes; upload, list, delete."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
-from app.deps import get_note_client
+from app.core.deps import get_note_client
 from app.notes.interfaces.client.notes import INoteClient
 from app.shared.schemas.notes import NoteListResponse, NoteResponse
 from app.config import settings
@@ -29,16 +29,16 @@ async def upload_note_file(
         File(description="Note content: .txt, .pdf, or handwritten image (.jpg, .png)", content_type=settings.allowed_content_types_list),
     ],
     recorded_at: Annotated[
-        datetime,
+        datetime | None,
         Form(description="When the note was recorded (ISO datetime). Omit to use current time."),
-    ],
+    ] = None,
 ) -> NoteResponse:
-
+    effective_recorded_at = recorded_at or datetime.now(timezone.utc)
     raw = await file.read()
 
     return await client.upload(
         patient_id=patient_id,
-        recorded_at=recorded_at,
+        recorded_at=effective_recorded_at,
         raw=raw,
         content_type=file.content_type,
     )

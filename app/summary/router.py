@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from typing import Annotated
 
-from app.deps import get_summary_client
+from app.core.deps import get_summary_client
 from app.shared.schemas.summary import PatientSummaryResponse
 from app.summary.interfaces.client.summary import ISummaryClient
 

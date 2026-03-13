@@ -1,5 +1,6 @@
 """Patient repository integration tests (real DB)."""
 
+from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -11,18 +12,23 @@ from app.shared.schemas.patients import PatientCreateRequest, PatientUpdateReque
 @pytest.mark.asyncio
 async def test_patient_repository_crud(db_session):
     repo = PatientRepository(db_session)
-    req = PatientCreateRequest(external_id=f"ext-{uuid4()}", full_name="Integration Patient")
+    req = PatientCreateRequest(
+        name="Integration Patient",
+        birth_date=date(1990, 1, 15),
+        document_number=f"doc-{uuid4()}",
+    )
     created = await repo.create(req)
     assert created.id is not None
-    assert created.external_id == req.external_id
+    assert created.name == req.name
+    assert created.document_number == req.document_number
 
     by_id = await repo.get_by_id(created.id)
     assert by_id is not None
     assert by_id.id == created.id
 
-    updated = await repo.update(created.id, PatientUpdateRequest(full_name="Updated Name"))
+    updated = await repo.update(created.id, PatientUpdateRequest(name="Updated Name"))
     assert updated is not None
-    assert updated.full_name == "Updated Name"
+    assert updated.name == "Updated Name"
 
     deleted = await repo.delete(created.id)
     assert deleted is True
