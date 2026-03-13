@@ -2,6 +2,8 @@
 
 This overlay applies the **base** workloads (API, PostgreSQL, MinIO) with **development** ConfigMaps and Secrets. You can run it on any Kubernetes cluster, including a local **k3s** (or kind/k3d) cluster.
 
+**Quick start from repo root:** Run `make dev` for a one-command flow (build, load image, deploy, wait for Postgres); then `make port-forward-postgres`, `make migrate`, and `make port-forward-api`. See the root [Makefile](../../Makefile) and `make help`.
+
 For a full local stack that also includes the **observability stack** (OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana), see [../k3s/README.md](../k3s/README.md).
 
 ## Prerequisites

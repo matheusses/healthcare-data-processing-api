@@ -2,6 +2,26 @@
 
 Modular monolith API for **patients**, **medical notes** (SOAP), and **structured summaries**, with production-oriented observability (OpenTelemetry, Prometheus, Loki, Tempo, Grafana).
 
+## Quick start
+
+From the repo root, run the full local flow (build, deploy, migrations), then expose the API:
+
+```bash
+make quick-start-local
+```
+
+In another terminal, port-forward the API and open the docs:
+
+```bash
+make port-forward-api
+```
+
+Then open **http://localhost:8000/docs**. Prerequisites: k3s (or kind/k3d), kubectl, Docker. Set `CLUSTER=kind` or `CLUSTER=k3d` (and optionally `KIND_CLUSTER`/`K3D_CLUSTER`) when not using k3s. See `make help` for all targets; for the k3s overlay with observability use `make quick-start-local-k3s`.
+
+> **You must set `OPENAI_API_KEY`** for summary and chat features (`GET /patients/{id}/summary`, `POST /patients/{id}/chat`) and for note embeddings. After deploy, patch the API secret: `make secret-api-patch OPENAI_API_KEY=your-key` then `make restart-api`. Or edit `deploy/development/api-secret.yaml` before the first deploy (do not commit real keys). See [deploy/development/README.md](deploy/development/README.md#providing-openai_api_key).
+
+---
+
 ## Overview
 
 - **Architecture**: [ADR 001 — Modular Monolith](docs/adr/001-modular-monolith-architecture.md). Modules: Patients, Notes, Summary. Communication only via `client.py` and DTOs.
@@ -110,6 +130,8 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 **Compose services:** `docker-compose.yml` defines `api`, `postgres` (with healthcheck), `minio`, `minio-provision`, `otelcol`, `prometheus`, `loki`, `tempo`, `grafana`. All start together; the API depends on Postgres (healthy), MinIO, and otelcol. If you later add [Compose profiles](https://docs.docker.com/compose/profiles/) (e.g. to run without the observability stack), you would start with `docker compose --profile observability up -d` and document the profile in this section.
 
 **Dev vs production:** `docker-compose.override.yml` is applied by default (dev: app volume mount, `--reload`). For production-like settings without overrides, run `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`. See [Task 004](docs/tasks/004-containerization-and-deployment.md).
+
+**Quick start:** See [Quick start](#quick-start) at the top for `make quick-start-local` and `make port-forward-api`.
 
 **Kubernetes (k3s / kind / k3d):** For deployment on a local or remote cluster, use the Kustomize overlays in `deploy/`. See [Kubernetes deployment](deploy/README.md) for the base + overlays layout and [Development overlay](deploy/development/README.md) for prerequisites, image build/load, migrations, and port-forwarding.
 

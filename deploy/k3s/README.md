@@ -2,6 +2,8 @@
 
 Lightweight local deployment using **k3s** (or **kind** for ephemeral CI). The API, Postgres (pgvector), optional MinIO, and the **observability stack** (otelcol, Prometheus, Loki, Tempo, Grafana) run in the `healthcare-api` namespace.
 
+**Quick start from repo root:** Run `make k3s` for a one-command flow (build, load image, deploy, wait for Postgres); then `make port-forward-postgres`, `make migrate`, and `make port-forward-api` (and optionally `make port-forward-grafana`). See the root [Makefile](../../Makefile) and `make help`.
+
 **GitHub Actions:** The workflow `[.github/workflows/deploy-local.yml](../../.github/workflows/deploy-local.yml)` deploys to a **kind** cluster on push to `main`/`master` or via manual run: it builds the image, applies these manifests, runs migrations, and smoke-tests the API.
 
 ## Prerequisites
