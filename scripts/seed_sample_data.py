@@ -39,7 +39,9 @@ async def seed(session: AsyncSession, force: bool) -> int:
     if not force:
         existing = await session.execute(select(PatientModel))
         if existing.scalars().first() is not None:
-            print("Database already has patients; skipping seed (use --force to add demo data anyway).")
+            print(
+                "Database already has patients; skipping seed (use --force to add demo data anyway)."
+            )
             return 0
 
     # Idempotent: skip if demo patients already exist
@@ -64,23 +66,25 @@ async def seed(session: AsyncSession, force: bool) -> int:
 
     # Sample notes (storage_key placeholder; no file in MinIO required for demo)
     now = datetime.now(timezone.utc)
-    session.add_all([
-        NoteModel(
-            patient_id=p1.id,
-            recorded_at=now,
-            storage_key="seed/demo-note-1.txt",
-        ),
-        NoteModel(
-            patient_id=p1.id,
-            recorded_at=now,
-            storage_key="seed/demo-note-2.txt",
-        ),
-        NoteModel(
-            patient_id=p2.id,
-            recorded_at=now,
-            storage_key="seed/demo-note-3.txt",
-        ),
-    ])
+    session.add_all(
+        [
+            NoteModel(
+                patient_id=p1.id,
+                recorded_at=now,
+                storage_key="seed/demo-note-1.txt",
+            ),
+            NoteModel(
+                patient_id=p1.id,
+                recorded_at=now,
+                storage_key="seed/demo-note-2.txt",
+            ),
+            NoteModel(
+                patient_id=p2.id,
+                recorded_at=now,
+                storage_key="seed/demo-note-3.txt",
+            ),
+        ]
+    )
     await session.commit()
     print("Sample data seeded: 2 patients, 3 notes (DEMO-001, DEMO-002).")
     return 2
@@ -97,7 +101,10 @@ def main() -> None:
 
     settings = Settings()
     if not settings.DATABASE_URL or not settings.DATABASE_URL.strip():
-        print("DATABASE_URL is not set. Copy .env.example to .env and set DATABASE_URL (or run after ./scripts/initial_db.sh).", file=sys.stderr)
+        print(
+            "DATABASE_URL is not set. Copy .env.example to .env and set DATABASE_URL (or run after ./scripts/initial_db.sh).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     engine = create_async_engine(

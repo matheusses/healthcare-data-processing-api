@@ -32,7 +32,10 @@ def test_build_trace_export_endpoint_keeps_existing_traces_path() -> None:
 
 def test_build_log_export_endpoint_appends_path() -> None:
     assert _build_log_export_endpoint("http://localhost:4317") == "http://localhost:4317/v1/logs"
-    assert _build_log_export_endpoint("http://localhost:4317/v1/logs") == "http://localhost:4317/v1/logs"
+    assert (
+        _build_log_export_endpoint("http://localhost:4317/v1/logs")
+        == "http://localhost:4317/v1/logs"
+    )
 
 
 def test_build_sampler_uses_parent_based_ratio() -> None:

@@ -32,7 +32,8 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.instrumentation.logging.handler import LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -84,7 +85,9 @@ def _build_trace_export_endpoint(base_endpoint: str) -> str:
     if path.endswith(OTLP_HTTP_TRACES_PATH):
         full_path = path
     else:
-        full_path = f"{path.rstrip('/')}/{OTLP_HTTP_TRACES_PATH}".lstrip("/") or OTLP_HTTP_TRACES_PATH
+        full_path = (
+            f"{path.rstrip('/')}/{OTLP_HTTP_TRACES_PATH}".lstrip("/") or OTLP_HTTP_TRACES_PATH
+        )
     if not full_path.startswith("/"):
         full_path = "/" + full_path
     scheme = parsed.scheme or "http"

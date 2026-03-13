@@ -56,7 +56,11 @@ class PatientService:
         order_direction: Literal["asc", "desc"] = "asc",
     ) -> list[PatientResponse]:
         internals = await self._repo.list_patients(
-            limit=limit, offset=offset, search=search, order_by=order_by, order_direction=order_direction
+            limit=limit,
+            offset=offset,
+            search=search,
+            order_by=order_by,
+            order_direction=order_direction,
         )
         return [self._to_response(internal) for internal in internals]
 
@@ -65,5 +69,5 @@ class PatientService:
             id=patient.id,
             name=patient.name,
             birth_date=patient.birth_date,
-            document_number=patient.document_number
+            document_number=patient.document_number,
         )

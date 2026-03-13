@@ -47,7 +47,9 @@ class NoteRepository(INoteRepository):
         await self._session.flush()
         return True
 
-    async def list_by_patient(self, patient_id: UUID, limit: int = 100, offset: int = 0) -> list[Note]:
+    async def list_by_patient(
+        self, patient_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[Note]:
         stmt = (
             select(NoteModel)
             .where(NoteModel.patient_id == patient_id)
@@ -58,5 +60,3 @@ class NoteRepository(INoteRepository):
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
         return [Note.model_validate(row) for row in rows]
-
-

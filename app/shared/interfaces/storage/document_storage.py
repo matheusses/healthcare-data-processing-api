@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class IDocumentStorage(ABC):
     """Interface for document storage operations."""
 

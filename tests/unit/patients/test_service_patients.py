@@ -59,7 +59,9 @@ class MockPatientRepository:
             return True
         return False
 
-    async def list_patients(self, limit=100, offset=0, search=None, order_by="name", order_direction="asc"):
+    async def list_patients(
+        self, limit=100, offset=0, search=None, order_by="name", order_direction="asc"
+    ):
         items = list(self.by_id.values())[offset : offset + limit]
         return items
 

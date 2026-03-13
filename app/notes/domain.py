@@ -6,7 +6,6 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-
 class Note(BaseModel):
     """Domain entity for a patient note."""
 
@@ -14,6 +13,5 @@ class Note(BaseModel):
     patient_id: UUID
     recorded_at: datetime
     storage_key: str
-
 
     model_config = {"from_attributes": True}

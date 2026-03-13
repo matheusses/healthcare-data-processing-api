@@ -12,11 +12,9 @@ from app.shared.interfaces.document_loading.extractor import IDocumentExtractor
 logger = logging.getLogger(__name__)
 
 
-
 class DocumentExtractor(IDocumentExtractor):
     """Extract text from uploaded note files: .txt, .pdf, and images (jpg, png) via OCR."""
 
-    
     async def extract_text_from_upload(self, raw: bytes, content_type: str) -> str:
         """
         Read the uploaded file and extract plain text.
@@ -27,7 +25,9 @@ class DocumentExtractor(IDocumentExtractor):
         Raises DomainException if extraction fails (e.g. corrupted PDF).
         """
         if content_type not in settings.allowed_content_types_list:
-            raise DomainException(f"Unsupported file type: {content_type}.", code="INVALID_FILE_TYPE")
+            raise DomainException(
+                f"Unsupported file type: {content_type}.", code="INVALID_FILE_TYPE"
+            )
 
         match content_type:
             case "text/plain":
@@ -37,8 +37,9 @@ class DocumentExtractor(IDocumentExtractor):
             case "image/jpeg" | "image/jpg" | "image/png":
                 return self._extract_text_from_image(raw)
             case _:
-                raise DomainException(f"Unsupported file type: {content_type}.", code="INVALID_FILE_TYPE")
-
+                raise DomainException(
+                    f"Unsupported file type: {content_type}.", code="INVALID_FILE_TYPE"
+                )
 
     def _extract_text_from_pdf(self, raw: bytes) -> str:
         """Extract text from PDF bytes using LangChain PyPDFLoader (temp file)."""
@@ -57,11 +58,12 @@ class DocumentExtractor(IDocumentExtractor):
             return ""
         return "\n\n".join(d.page_content for d in docs if d.page_content).strip()
 
-
     def _extract_text_from_image(self, raw: bytes) -> str:
         """Extract text from image bytes using RapidOCR (handwritten supported)."""
         try:
-            from langchain_community.document_loaders.parsers.pdf import extract_from_images_with_rapidocr
+            from langchain_community.document_loaders.parsers.pdf import (
+                extract_from_images_with_rapidocr,
+            )
         except ImportError as e:
             logger.warning("RapidOCR not available: %s", e)
             raise DomainException("Image OCR not available.", code="EXTRACTION_ERROR") from e
@@ -75,5 +77,3 @@ class DocumentExtractor(IDocumentExtractor):
                 code="EXTRACTION_ERROR",
             ) from e
         return (text or "").strip()
-
-    

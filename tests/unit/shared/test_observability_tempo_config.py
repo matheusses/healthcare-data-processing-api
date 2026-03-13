@@ -5,9 +5,9 @@ from pathlib import Path
 
 def test_tempo_enables_metrics_generator_local_blocks() -> None:
     """TraceQL metrics need metrics-generator + local-blocks to avoid empty ring."""
-    tempo_config = (
-        Path(__file__).resolve().parents[3] / "observability" / "tempo.yml"
-    ).read_text(encoding="utf-8")
+    tempo_config = (Path(__file__).resolve().parents[3] / "observability" / "tempo.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert "metrics_generator:" in tempo_config
     assert "ring:" in tempo_config

@@ -16,7 +16,7 @@ class NoteChunkRepository(INoteChunkRepository):
     def __init__(self, session: AsyncSession, embedding_pipeline: IEmbeddingPipeline) -> None:
         self._session = session
         self._embedding_pipeline = embedding_pipeline
-         
+
     async def get_contents_ordered(self, note_id: UUID) -> list[str]:
         """Return chunk content strings for a note, ordered by chunk_index."""
         stmt = (
@@ -26,7 +26,7 @@ class NoteChunkRepository(INoteChunkRepository):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
-    
+
     async def process_note(
         self,
         note_id: UUID,

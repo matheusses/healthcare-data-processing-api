@@ -38,5 +38,9 @@ class PatientClient(IPatientClient):
         order_direction: Literal["asc", "desc"] = "asc",
     ) -> list[PatientResponse]:
         return await self._service.list_patients(
-            limit=limit, offset=offset, search=search, order_by=order_by, order_direction=order_direction
+            limit=limit,
+            offset=offset,
+            search=search,
+            order_by=order_by,
+            order_direction=order_direction,
         )

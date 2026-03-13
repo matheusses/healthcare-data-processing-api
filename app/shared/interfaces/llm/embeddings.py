@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class IEmbeddingPipeline(ABC):
     """Interface for embedding pipeline operations."""
 

@@ -18,6 +18,7 @@ from app.shared.db.database import Base
 
 # Import all models so that Base.metadata contains every table (for autogenerate).
 from app.shared.db.models import *  # noqa: F403
+
 config = context.config
 
 if config.config_file_name is not None:

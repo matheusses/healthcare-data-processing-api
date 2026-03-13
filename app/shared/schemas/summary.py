@@ -23,7 +23,9 @@ class PatientSummaryResponse(BaseModel):
     assessment: str = Field("", description="A: Assessment/diagnosis")
     plan: str = Field("", description="P: Plan, medications, follow-up")
     generated_at: datetime = Field(..., description="When the summary was generated")
-    note_ids: list[UUID] = Field(default_factory=list, description="Source note IDs used for the summary")
+    note_ids: list[UUID] = Field(
+        default_factory=list, description="Source note IDs used for the summary"
+    )
 
 
 class SOAPSummaryOutput(BaseModel):

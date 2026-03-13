@@ -60,7 +60,7 @@ class DocumentStorageClient(IDocumentStorage):
             length=len(raw),
         )
         return key
-    
+
     async def generate_pre_signed_url(self, storage_key: str) -> str:
         """Generate a pre-signed URL for a note content object."""
         client = self._get_client()

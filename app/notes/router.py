@@ -19,14 +19,16 @@ NoteClientDep = Annotated[INoteClient, Depends(get_note_client)]
 UPLOAD_MAX_BYTES = 10 * 1024 * 1024
 
 
-
 @router.post("/upload", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
 async def upload_note_file(
     patient_id: UUID,
     client: NoteClientDep,
     file: Annotated[
         UploadFile,
-        File(description="Note content: .txt, .pdf, or handwritten image (.jpg, .png)", content_type=settings.allowed_content_types_list),
+        File(
+            description="Note content: .txt, .pdf, or handwritten image (.jpg, .png)",
+            content_type=settings.allowed_content_types_list,
+        ),
     ],
     recorded_at: Annotated[
         datetime | None,

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 class Patient(BaseModel):
     """Domain entity for a patient."""
+
     id: UUID
     name: str
     birth_date: date

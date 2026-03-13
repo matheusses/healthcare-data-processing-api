@@ -31,6 +31,8 @@ class INoteRepository:
         ...
 
     @abstractmethod
-    async def list_by_patient(self, patient_id: UUID, limit: int = 100, offset: int = 0) -> list[Note]:
+    async def list_by_patient(
+        self, patient_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[Note]:
         """List notes for a patient ordered by recorded_at desc."""
         ...

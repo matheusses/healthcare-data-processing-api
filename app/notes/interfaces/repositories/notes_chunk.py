@@ -16,6 +16,7 @@ class INoteChunkRepository:
     async def process_note(self, note_id: UUID, content: str) -> None:
         """Process a note and its content."""
         ...
+
     @abstractmethod
     async def delete_note_chunks(self, note_id: UUID) -> None:
         """Delete all chunks for a note."""

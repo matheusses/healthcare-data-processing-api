@@ -182,7 +182,7 @@ The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `
 - [Task 004 — Containerization and deployment](docs/tasks/004-containerization-and-deployment.md)
 - [Monitoring and observability](docs/monitoring.md) (Prometheus, Grafana, SLO)
 - [Notes API usage](docs/notes-api.md) (SOAP context and endpoints)
-- [k3s deployment](deploy/k3s/README.md) (local Kubernetes)
+- [Kubernetes deployment](deploy/README.md) (base + development/production overlays)
 
 ## License
 

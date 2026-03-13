@@ -22,7 +22,9 @@ class INoteClient(ABC):
         ...
 
     @abstractmethod
-    async def list_by_patient(self, patient_id: UUID, limit: int = 100, offset: int = 0) -> NoteListResponse:
+    async def list_by_patient(
+        self, patient_id: UUID, limit: int = 100, offset: int = 0
+    ) -> NoteListResponse:
         """List notes for a patient."""
         ...
 

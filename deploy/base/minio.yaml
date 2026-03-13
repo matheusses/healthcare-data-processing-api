@@ -1,9 +1,7 @@
-# Optional: MinIO for document storage. Apply after postgres and before or with api.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: minio-pvc
-  namespace: healthcare-api
 spec:
   accessModes: [ReadWriteOnce]
   resources:
@@ -14,7 +12,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: minio
-  namespace: healthcare-api
 spec:
   replicas: 1
   selector:
@@ -52,20 +49,9 @@ spec:
             claimName: minio-pvc
 ---
 apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-secret
-  namespace: healthcare-api
-type: Opaque
-stringData:
-  MINIO_ROOT_USER: "minioadmin"
-  MINIO_ROOT_PASSWORD: "minioadmin"
----
-apiVersion: v1
 kind: Service
 metadata:
   name: minio
-  namespace: healthcare-api
 spec:
   selector:
     app: minio

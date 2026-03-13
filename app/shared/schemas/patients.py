@@ -30,4 +30,3 @@ class PatientResponse(BaseModel):
     document_number: str
 
     model_config = {"from_attributes": True}
-

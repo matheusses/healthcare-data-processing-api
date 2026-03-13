@@ -10,6 +10,7 @@ from app.shared.storage.document_storage import DocumentStorageClient
 
 class Container(containers.DeclarativeContainer):
     """Application container. Session is request-scoped via get_db; repos need session from Depends."""
+
     config = providers.Singleton(Settings)
 
     settings = providers.Singleton(Settings)
@@ -24,7 +25,7 @@ class Container(containers.DeclarativeContainer):
         build_session_factory,
         engine=engine,
     )
-    
+
     # infrastructure resources(shared)
     document_storage = providers.Factory(DocumentStorageClient)
     document_extractor = providers.Factory(DocumentExtractor)

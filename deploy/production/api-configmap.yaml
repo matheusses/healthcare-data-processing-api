@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  ENVIRONMENT: production
+  OTEL_SERVICE_NAME: healthcare-api
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otelcol:4317"
+  OTEL_EXPORTER_OTLP_INSECURE: "false"
+  DOCUMENT_STORAGE_BUCKET: patient-notes
+  DOCUMENT_STORAGE_ENDPOINT: "http://minio.healthcare-api.svc.cluster.local:9000"
+  CHUNK_SIZE: "800"
+  CHUNK_OVERLAP: "100"
+  VECTOR_EMBEDDING_MODEL: "text-embedding-3-small"
+  VECTOR_EMBEDDING_DIMENSIONS: "1536"
+  OPENAI_SUMMARY_MODEL: "gpt-4o-mini"
+  OPENAI_CHAT_MODEL: "gpt-4o-mini"
+  OPENAI_TEMPERATURE: "0"
+  OPENAI_TOP_P: "0.5"
+  PG_TRGM_SIMILARITY_THRESHOLD: "0.2"
+  ALLOWED_CONTENT_TYPES: "text/plain, application/pdf, image/jpeg, image/jpg, image/png"

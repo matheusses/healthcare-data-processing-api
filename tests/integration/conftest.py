@@ -10,7 +10,6 @@ from app.config import Settings
 from app.shared.db.database import Base
 
 
-
 @pytest.fixture
 def settings():
     return Settings()

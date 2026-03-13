@@ -36,10 +36,12 @@ def test_chat_returns_404_for_missing_patient(client_with_lifespan):
         )
     except (RuntimeError, OSError, ConnectionError) as e:
         import pytest
+
         pytest.skip(f"Database or async environment not available: {e}")
     except Exception as e:
         if "Connect" in str(e) or "refused" in str(e).lower() or "5434" in str(e):
             import pytest
+
             pytest.skip("Database not available")
         raise
     assert r.status_code == 404

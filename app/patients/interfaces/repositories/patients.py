@@ -4,6 +4,7 @@ from uuid import UUID
 from app.patients.domain import Patient
 from app.shared.schemas.patients import PatientCreateRequest, PatientUpdateRequest
 
+
 class IPatientRepository:
     """Abstract interface for patient persistence."""
 

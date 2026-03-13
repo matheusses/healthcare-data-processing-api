@@ -1,5 +1,6 @@
 """Functional HTTP tests for GET /patients/{id}/summary."""
 
+
 def test_summary_route_registered(client):
     """Summary route is present under /patients."""
     r = client.get("/openapi.json")

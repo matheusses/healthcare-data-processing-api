@@ -16,4 +16,3 @@ def test_patients_router_mounted(client):
     assert r.status_code == 200
     paths = r.json().get("paths", {})
     assert any(p.startswith("/patients") for p in paths)
-

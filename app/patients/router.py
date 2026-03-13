@@ -24,11 +24,19 @@ async def list_patients(
     limit: int = 100,
     offset: int = 0,
     search: str | None = Query(default=None, description="Search by name or document number"),
-    order_by: Literal["name", "birth_date", "document_number"] = Query(default="name", description="Order by field"),
+    order_by: Literal["name", "birth_date", "document_number"] = Query(
+        default="name", description="Order by field"
+    ),
     order_direction: Literal["asc", "desc"] = Query(default="asc", description="Order direction"),
 ) -> list[PatientResponse]:
     """List patients with pagination. When search is provided, results are ordered by name similarity (most similar first)."""
-    return await client.list_patients(limit=limit, offset=offset, search=search, order_by=order_by, order_direction=order_direction)
+    return await client.list_patients(
+        limit=limit,
+        offset=offset,
+        search=search,
+        order_by=order_by,
+        order_direction=order_direction,
+    )
 
 
 @router.get("/{patient_id}", response_model=PatientResponse)

@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+
 def test_upload_file_missing_returns_422(client):
     """POST /upload without file returns 422."""
     r = client.post(
@@ -27,4 +28,3 @@ def test_upload_note_requires_valid_body(client):
         data={},
     )
     assert r.status_code in (400, 422)
-

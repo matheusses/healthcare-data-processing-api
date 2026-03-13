@@ -26,7 +26,9 @@ class PatientRepository(IPatientRepository):
         return Patient.model_validate(row) if row else None
 
     async def create(self, data: PatientCreateRequest) -> Patient:
-        model = PatientModel(document_number=data.document_number, name=data.name, birth_date=data.birth_date)
+        model = PatientModel(
+            document_number=data.document_number, name=data.name, birth_date=data.birth_date
+        )
         self._session.add(model)
         await self._session.flush()
         await self._session.refresh(model)
@@ -55,7 +57,9 @@ class PatientRepository(IPatientRepository):
         return True
 
     async def get_by_document_number(self, document_number: str) -> Patient | None:
-        result = await self._session.execute(select(PatientModel).where(PatientModel.document_number == document_number))
+        result = await self._session.execute(
+            select(PatientModel).where(PatientModel.document_number == document_number)
+        )
         row = result.scalar_one_or_none()
         return Patient.model_validate(row) if row else None
 
@@ -91,7 +95,11 @@ class PatientRepository(IPatientRepository):
         else:
             stmt = (
                 select(PatientModel)
-                .order_by(getattr(PatientModel, order_by).asc() if order_direction == "asc" else getattr(PatientModel, order_by).desc())
+                .order_by(
+                    getattr(PatientModel, order_by).asc()
+                    if order_direction == "asc"
+                    else getattr(PatientModel, order_by).desc()
+                )
                 .limit(limit)
                 .offset(offset)
             )

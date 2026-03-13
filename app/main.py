@@ -43,6 +43,7 @@ def _unexpected_exception_handler(request: Request, exc: UnexpectedException):
         content={"detail": exc.message or "Internal server error"},
     )
 
+
 def _not_found_exception_handler(request: Request, exc: NotFoundException):
     from fastapi.responses import JSONResponse
 
@@ -51,9 +52,10 @@ def _not_found_exception_handler(request: Request, exc: NotFoundException):
         content={"detail": exc.message},
     )
 
+
 app = FastAPI(
     title="Healthcare Data Processing API",
-    description="Modular monolith: patients, notes (SOAP), summaries"
+    description="Modular monolith: patients, notes (SOAP), summaries",
 )
 app.state.container = container
 
@@ -77,6 +79,7 @@ async def healthcheck():
     """
     logger.info("Health check endpoint called")
     return {"status": "ok"}
+
 
 app.include_router(main_router)
 app.include_router(patients_router)
