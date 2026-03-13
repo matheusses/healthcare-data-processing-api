@@ -10,7 +10,6 @@ from app.notes.interfaces.repositories.notes_chunk import INoteChunkRepository
 from app.patients.interfaces.client.patients import IPatientClient
 from app.shared.exceptions import DomainException, NotFoundException
 from app.shared.interfaces.document_loading.extractor import IDocumentExtractor
-from app.shared.interfaces.llm.embeddings import IEmbeddingPipeline
 from app.shared.interfaces.storage.document_storage import IDocumentStorage
 from app.shared.schemas.notes import NoteContentItem, NoteListResponse, NoteResponse
 
@@ -23,14 +22,12 @@ class NoteService:
         note_repository: INoteRepository,
         patient_client: IPatientClient,
         document_storage: IDocumentStorage,
-        embedding_pipeline: IEmbeddingPipeline,
         document_extractor: IDocumentExtractor,
-        note_chunk_repository: INoteChunkRepository | None = None,
+        note_chunk_repository: INoteChunkRepository,
     ) -> None:
         self._note_repository = note_repository
         self._patient_client = patient_client
         self._storage = document_storage
-        self._embedding_pipeline = embedding_pipeline
         self._document_extractor = document_extractor
         self._note_chunk_repository = note_chunk_repository
 
@@ -54,7 +51,7 @@ class NoteService:
             path=f"notes/{patient_id}/{recorded_at.isoformat()}.txt", raw=raw
         )
         note = await self._note_repository.create(patient_id, recorded_at, storage_key)
-        await self._embedding_pipeline.process_note(note.id, content)
+        await self._note_chunk_repository.process(note.id, content)
         return self._to_response(note)
 
     async def list_by_patient(
@@ -71,7 +68,7 @@ class NoteService:
         note = await self._note_repository.get_by_id(note_id)
         if not note:
             raise NotFoundException("Note not found")
-        await self._embedding_pipeline.delete_note_chunks(note_id)
+        await self._note_chunk_repository.delete(note_id)
         await self._storage.delete(note.storage_key)
         await self._note_repository.delete(note_id)
 

@@ -114,21 +114,26 @@ kubectl get pods -n healthcare-api
    - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 4. **Download a file from MinIO** (e.g. patient note): port-forward MinIO, then use a presigned URL from the API with `curl` and the in-cluster Host header:
-   ```bash
-   kubectl port-forward -n healthcare-api svc/minio 9000:9000
-   ```
-   ```bash
-   curl -o notes.txt \
-     -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
-     "http://127.0.0.1:9000/patient-notes/notes/<object-key>?<presigned-query-string>"
-   ```
-   Example with a real presigned URL:
-   ```bash
-   curl -o notes.txt \
-     -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
-     "http://127.0.0.1:9000/patient-notes/notes/2138cf4d-7fc7-4245-b90d-7627283971ad/2026-03-13T03%3A31%3A00.333000%2B00%3A00.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260313%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260313T051326Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=61d4fc7949125a823d96fccb3a55f2620f6fac1331e19eb5215779d0c8db0c1e"
-   ```
-   Replace the URL with a presigned URL returned by the API for the object you want to download.
+
+```bash
+kubectl port-forward -n healthcare-api svc/minio 9000:9000
+```
+
+```bash
+curl -o notes.txt \
+  -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
+  "http://127.0.0.1:9000/patient-notes/notes/<object-key>?<presigned-query-string>"
+```
+
+Example with a real presigned URL (replace with a presigned URL from the API; use raw `&` in the URL when running the command):
+
+```bash
+curl -o notes.txt \
+  -H "Host: minio.healthcare-api.svc.cluster.local:9000" \
+  "http://127.0.0.1:9000/patient-notes/notes/2138cf4d-7fc7-4245-b90d-7627283971ad/2026-03-13T03%3A31%3A00.333000%2B00%3A00.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260313%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260313T051326Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=61d4fc7949125a823d96fccb3a55f2620f6fac1331e19eb5215779d0c8db0c1e"
+```
+
+Replace the URL with a presigned URL returned by the API for the object you want to download.
 
 ## Development vs k3s overlay
 

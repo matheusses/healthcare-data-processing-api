@@ -32,12 +32,12 @@ class EmbeddingPipeline(IEmbeddingPipeline):
             openai_api_key=openai_api_key,
         )
 
-    async def embed_document(self, document: str) -> list[list[float]]:
+    async def embed_document(self, document: str) -> tuple[list[list[float]], list[str]]:
         """Embed a document and return the embedding."""
         chunks = self._splitter.split_text(document)
         if not chunks:
-            return 0
+            return [], []
 
         embeddings: list[list[float]] = []
         embeddings = await self._embedding.aembed_documents(chunks)
-        return embeddings
+        return embeddings, chunks

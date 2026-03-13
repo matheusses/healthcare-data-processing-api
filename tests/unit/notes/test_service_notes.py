@@ -78,12 +78,15 @@ class MockDocumentExtractor:
         return "SOAP note content"
 
 
-class MockEmbeddingPipeline:
-    async def process_note(self, note_id, content: str) -> None:
+class MockNoteChunkRepository:
+    async def process(self, note_id, content: str) -> int:
+        return 1
+
+    async def delete(self, note_id) -> None:
         pass
 
-    async def delete_note_chunks(self, note_id) -> None:
-        pass
+    async def get_contents_ordered(self, note_id) -> list:
+        return []
 
 
 @pytest.mark.asyncio
@@ -93,13 +96,13 @@ async def test_note_service_create_ok():
     patient_client = MockPatientClient(existing_ids=[patient_id])
     storage = MockDocumentStorage()
     extractor = MockDocumentExtractor()
-    embedding = MockEmbeddingPipeline()
+    note_chunk_repo = MockNoteChunkRepository()
     svc = NoteService(
         note_repository=note_repo,
         patient_client=patient_client,
         document_storage=storage,
-        embedding_pipeline=embedding,
         document_extractor=extractor,
+        note_chunk_repository=note_chunk_repo,
     )
     rec = datetime(2023, 10, 26, 12, 0, 0, tzinfo=timezone.utc)
     resp = await svc.create(
@@ -119,13 +122,13 @@ async def test_note_service_create_patient_not_found():
     patient_client = MockPatientClient(existing_ids=[])
     storage = MockDocumentStorage()
     extractor = MockDocumentExtractor()
-    embedding = MockEmbeddingPipeline()
+    note_chunk_repo = MockNoteChunkRepository()
     svc = NoteService(
         note_repository=note_repo,
         patient_client=patient_client,
         document_storage=storage,
-        embedding_pipeline=embedding,
         document_extractor=extractor,
+        note_chunk_repository=note_chunk_repo,
     )
     rec = datetime(2023, 10, 26, 12, 0, 0, tzinfo=timezone.utc)
     with pytest.raises(NotFoundException) as exc_info:
@@ -143,13 +146,13 @@ async def test_note_service_delete_not_found():
     note_repo = MockNoteRepository()
     patient_client = MockPatientClient(existing_ids=[])
     storage = MockDocumentStorage()
-    embedding = MockEmbeddingPipeline()
+    note_chunk_repo = MockNoteChunkRepository()
     svc = NoteService(
         note_repository=note_repo,
         patient_client=patient_client,
         document_storage=storage,
-        embedding_pipeline=embedding,
         document_extractor=MockDocumentExtractor(),
+        note_chunk_repository=note_chunk_repo,
     )
     with pytest.raises(NotFoundException):
         await svc.delete(uuid4())
@@ -165,13 +168,13 @@ async def test_note_service_list_by_patient():
     await note_repo.create(patient_id, rec2, "key2.txt")
     patient_client = MockPatientClient(existing_ids=[patient_id])
     storage = MockDocumentStorage()
-    embedding = MockEmbeddingPipeline()
+    note_chunk_repo = MockNoteChunkRepository()
     svc = NoteService(
         note_repository=note_repo,
         patient_client=patient_client,
         document_storage=storage,
-        embedding_pipeline=embedding,
         document_extractor=MockDocumentExtractor(),
+        note_chunk_repository=note_chunk_repo,
     )
     out = await svc.list_by_patient(patient_id, limit=10, offset=0)
     assert out.total == 2

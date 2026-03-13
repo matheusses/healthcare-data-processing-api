@@ -61,7 +61,6 @@ async def get_note_client(request: Request, session: AsyncSession = Depends(get_
         note_repository,
         patient_client,
         document_storage,
-        embedding_pipeline,
         document_extractor,
         note_chunk_repository,
     )

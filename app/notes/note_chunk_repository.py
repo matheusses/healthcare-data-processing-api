@@ -27,21 +27,15 @@ class NoteChunkRepository(INoteChunkRepository):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def process_note(
+    async def process(
         self,
         note_id: UUID,
         content: str,
     ) -> int:
-        """
-        Split content into chunks, optionally embed, persist to note_chunks.
-        Returns number of chunks written.
-        """
-        chunks = self._splitter.split_text(content)
-        if not chunks:
-            return 0
+        """Process a note and its content."""
 
         embeddings: list[list[float]] = []
-        embeddings = await self._embedding_pipeline.embed_documents(chunks)
+        embeddings, chunks = await self._embedding_pipeline.embed_document(content)
 
         for i, content in enumerate(chunks):
             embedding = embeddings[i] if i < len(embeddings) else None
@@ -55,13 +49,8 @@ class NoteChunkRepository(INoteChunkRepository):
         await self._session.flush()
         return len(chunks)
 
-    async def delete_note_chunks(self, note_id: UUID) -> None:
+    async def delete(self, note_id: UUID) -> None:
         """Delete all chunks for a note."""
         stmt = delete(NoteChunkModel).where(NoteChunkModel.note_id == note_id)
-        result = await self._session.execute(stmt)
-        model = result.scalar_one_or_none()
-        if not model:
-            return False
-        await self._session.delete(model)
+        await self._session.execute(stmt)
         await self._session.flush()
-        return True

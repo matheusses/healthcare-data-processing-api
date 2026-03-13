@@ -12,6 +12,7 @@ services:
     # Mount app for live code reload (optional; remove if you prefer image-only runs)
     volumes:
       - ./app:/app/app:ro
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # Only override CMD args (ENTRYPOINT is uvicorn app.main:app from Dockerfile)
+    command: ["--host", "0.0.0.0", "--port", "8000", "--reload"]
     stdin_open: true
     tty: true
