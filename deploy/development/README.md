@@ -147,10 +147,35 @@ Use **deploy/development** when you want the same base + dev config on an existi
 ## Secrets
 
 - **postgres**: `postgres-secret` — set `POSTGRES_PASSWORD` (replace `change-me` for anything beyond local play).
-- **api**: `api-secret` — `DATABASE_URL`, MinIO keys; must match Postgres and MinIO.
+- **api**: `api-secret` — `DATABASE_URL`, MinIO keys, **OPENAI_API_KEY**; must match Postgres and MinIO.
 - **minio**: `minio-secret` — `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`.
 
 Do not commit real secrets; use a secret manager or `kubectl create secret` in production.
+
+### Providing OPENAI_API_KEY
+
+The API uses OpenAI for features that require an LLM (e.g. embeddings or chat). You must set `OPENAI_API_KEY` in the `api-secret` before the API can call OpenAI.
+
+**Option A — Before first deploy:** Edit `deploy/development/api-secret.yaml` and set `OPENAI_API_KEY` in `stringData` to your key (e.g. `sk-...`). Then run `kubectl apply -k deploy/development`. Do not commit this file with a real key.
+
+**Option B — After deploy (recommended for local dev):** Create or patch the secret so the key is not stored in the repo:
+
+```bash
+kubectl create secret generic api-secret -n healthcare-api \
+  --from-literal=DATABASE_URL="postgresql+asyncpg://user:change-me@postgres.healthcare-api.svc.cluster.local:5432/healthcare" \
+  --from-literal=DOCUMENT_STORAGE_ACCESS_KEY="minioadmin" \
+  --from-literal=DOCUMENT_STORAGE_SECRET_KEY="minioadmin" \
+  --from-literal=OPENAI_API_KEY="your-openai-api-key-here" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Or patch only the OpenAI key (keeps existing api-secret keys unchanged):
+
+```bash
+kubectl patch secret api-secret -n healthcare-api -p "{\"stringData\":{\"OPENAI_API_KEY\":\"your-openai-api-key-here\"}}"
+```
+
+Then restart the API so it picks up the secret: `kubectl rollout restart deployment/api -n healthcare-api`.
 
 ## Restart API after image change
 
