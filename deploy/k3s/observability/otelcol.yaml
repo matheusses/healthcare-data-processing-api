@@ -1,0 +1,126 @@
+# OpenTelemetry Collector: receives OTLP from API, exports to Tempo/Loki, exposes metrics for Prometheus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol-config
+  namespace: healthcare-api
+data:
+  config.yml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 512
+        spike_limit_mib: 128
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+      resource:
+        attributes:
+          - action: upsert
+            key: service.name
+            value: healthcare-api
+          - action: upsert
+            key: service.namespace
+            value: backend
+          - action: upsert
+            key: deployment.environment
+            value: local
+    exporters:
+      debug:
+        verbosity: normal
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+      otlp/tempo:
+        endpoint: tempo:4317
+        tls:
+          insecure: true
+      otlphttp/loki:
+        endpoint: http://loki:3100/otlp
+        tls:
+          insecure: true
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, otlp/tempo]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, otlphttp/loki]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otelcol
+  namespace: healthcare-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otelcol
+  template:
+    metadata:
+      labels:
+        app: otelcol
+    spec:
+      containers:
+        - name: otelcol
+          image: otel/opentelemetry-collector-contrib:latest
+          args: ["--config=/etc/otelcol/config.yml"]
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+            - containerPort: 8889
+            - containerPort: 13133
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: otelcol-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otelcol
+  namespace: healthcare-api
+spec:
+  selector:
+    app: otelcol
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: metrics
+      port: 8889
+      targetPort: 8889
+    - name: health
+      port: 13133
+      targetPort: 13133
+  type: ClusterIP

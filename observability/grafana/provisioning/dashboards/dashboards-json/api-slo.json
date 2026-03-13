@@ -1,0 +1,80 @@
+{
+  "uid": "api-slo",
+  "title": "API SLO",
+  "tags": ["slo", "api", "latency", "availability"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "type": "timeseries",
+      "title": "Latency p95 (SLO target: e.g. < 500ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service))",
+          "legendFormat": "{{service}} p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "type": "timeseries",
+      "title": "Request rate (requests/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(traces_spanmetrics_calls_total[5m])) by (service)",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "type": "timeseries",
+      "title": "Latency p99",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service))",
+          "legendFormat": "{{service}} p99",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "type": "stat",
+      "title": "SLO: Data available",
+      "description": "Span metrics (Tempo → Prometheus) must be present for SLO panels. Send API traffic and wait 1–2 min if empty.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "count(traces_spanmetrics_calls_total)",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    }
+  ]
+}

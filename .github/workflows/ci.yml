@@ -1,0 +1,82 @@
+# CI: lint, test, and build. Runs on push to main and on pull requests.
+# Integration tests (tests/integration/) require Postgres; run them in a job with a service container or skip in CI.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies (with dev)
+        run: uv sync --frozen --all-groups
+
+      - name: Run unit and functional tests
+        run: uv run pytest tests/unit/ tests/functional/ -v --tb=short
+        env:
+          # Optional: skip or gate tests that require external services
+          DATABASE_URL: ""
+          OPENAI_API_KEY: ""
+
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: healthcare-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

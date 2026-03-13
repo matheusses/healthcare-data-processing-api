@@ -1,6 +1,5 @@
 """SummaryService tests with mocked deps and ISummaryLlm."""
 
-from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest

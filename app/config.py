@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Database: when DATABASE_URL is set (e.g. in Docker), it overrides POSTGRES_* components
     DATABASE_URL: str = ""
 
+    @property
+    def database_url(self) -> str:
+        """Alias for DATABASE_URL (used by scripts and tests)."""
+        return self.DATABASE_URL
 
     # OpenTelemetry (empty = disable OTLP export)
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"

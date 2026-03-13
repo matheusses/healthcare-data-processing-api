@@ -1,0 +1,137 @@
+# Tempo: traces. Receives OTLP from otelcol; remote_writes span-metrics to Prometheus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+  namespace: healthcare-api
+data:
+  tempo.yml: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+    ingester:
+      lifecycler:
+        address: 127.0.0.1
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
+        final_sleep: 0s
+      trace_idle_period: 10s
+      flush_check_period: 10s
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+    querier:
+      frontend_worker:
+        frontend_address: localhost:9095
+    metrics_generator:
+      ring:
+        kvstore:
+          store: inmemory
+      storage:
+        path: /var/tempo/generator/wal
+        remote_write:
+          - url: http://prometheus:9090/api/v1/write
+            send_exemplars: true
+      traces_storage:
+        path: /var/tempo/generator/traces
+    query_frontend:
+      search:
+        duration_slo: 5s
+        throughput_bytes_slo: 1.073741824e+09
+      trace_by_id:
+        duration_slo: 5s
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+        pool:
+          max_workers: 100
+          queue_depth: 10000
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - local-blocks
+            - span-metrics
+            - service-graphs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-pvc
+  namespace: healthcare-api
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: healthcare-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.6.0
+          args: ["-config.file=/etc/tempo/tempo.yml"]
+          ports:
+            - containerPort: 3200
+            - containerPort: 4317
+            - containerPort: 9095
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+            - name: data
+              mountPath: /var/tempo
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 3200
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: tempo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: healthcare-api
+spec:
+  selector:
+    app: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: 3200
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: grpc
+      port: 9095
+      targetPort: 9095
+  type: ClusterIP

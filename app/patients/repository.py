@@ -72,7 +72,7 @@ class PatientRepository(IPatientRepository):
             search_param = cast(bindparam("search_term", type_=String()), Text())
             col_name = PatientModel.name
             col_document_number = PatientModel.document_number
-            similarity_threshold = settings.pg_trgm_similarity_threshold
+            similarity_threshold = settings.PG_TRGM_SIMILARITY_THRESHOLD
             sim_name = func.similarity(col_name, search_param)
             sim_doc = func.similarity(col_document_number, search_param)
             stmt = (

@@ -1,0 +1,22 @@
+# Production-like compose: use with
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Does not enable dev overrides (no --reload, no app volume mount).
+# For real production, use orchestration (e.g. Kubernetes) and inject secrets via the platform.
+
+services:
+  api:
+    environment:
+      ENVIRONMENT: production
+    # No volume mount; run from image. No --reload.
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  grafana:
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: ""

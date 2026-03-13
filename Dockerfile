@@ -19,11 +19,18 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Non-root user for runtime (security best practice)
+RUN groupadd --gid 1000 app && useradd --uid 1000 --gid app --shell /bin/bash --create-home app
+RUN chown -R app:app /app
+
 COPY --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 COPY app ./app
 COPY pyproject.toml uv.lock ./
+RUN chown -R app:app /app
+
+USER app
 
 EXPOSE 8000
 
