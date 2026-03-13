@@ -4,10 +4,20 @@ The Healthcare Data Processing API is instrumented with **OpenTelemetry** and in
 
 ## Architecture
 
-- **API** → sends traces and (optionally) metrics via OTLP to **OpenTelemetry Collector**.
+- **API** → sends traces, logs, and (optionally) metrics via OTLP to **OpenTelemetry Collector**.
 - **OTel Collector** → exports traces to **Tempo**, logs to **Loki**, and exposes metrics for **Prometheus** (scrape on `otelcol:8889`).
 - **Tempo** → runs a **metrics-generator** (span-metrics) and remote-writes latency/throughput/error rate to **Prometheus**.
 - **Grafana** → provisioned with datasources for Prometheus, Loki, and Tempo; dashboards for span metrics and API SLO.
+
+## Logs (Loki)
+
+- **Levels**: With default `LOG_LEVEL=INFO`, the API sends **info**, **warn**, **error**, and **exception** (with stack traces) to OTLP; the collector forwards them to Loki. Set `LOG_LEVEL=DEBUG` to include debug logs.
+- **Correlation**: Log records include `trace_id` and `span_id` when emitted inside a request span, so in Grafana you can jump from a Tempo span to “Logs for this span” in Loki.
+
+## Traces (Tempo) and database instrumentation
+
+- **HTTP**: FastAPI is instrumented so each request creates a trace with span names derived from the route.
+- **Database**: SQLAlchemy (async) is instrumented so each DB operation (query, commit, etc.) appears as a **child span** of the request trace. In Tempo you can see request → DB spans and their duration.
 
 ## Key endpoints and ports
 

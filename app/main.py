@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 container = Container()
 settings = container.config()
 
-configure_logging()
+configure_logging(settings)
 _tracer_provider = setup_tracer_provider(settings)
 setup_logger_provider(settings)
 

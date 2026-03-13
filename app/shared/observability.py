@@ -184,15 +184,33 @@ def _inject_trace_context_processor(
     return event_dict
 
 
-def configure_logging() -> None:
+def _log_level_from_name(name: str) -> int:
+    """Map LOG_LEVEL string to logging module constant (default INFO)."""
+    level = (name or "INFO").strip().upper()
+    return getattr(logging, level, logging.INFO)
+
+
+def configure_logging(settings: Settings | None = None) -> None:
     """Configure structlog and instrument standard logging for OTEL context.
+
+    Ensures all log levels (info, warn, error, exception) are sent to OTLP/Loki
+    by setting the root logger and structlog filter to LOG_LEVEL from settings.
+    Default LOG_LEVEL=INFO captures INFO, WARNING, ERROR, CRITICAL and exceptions.
 
     - Injects OpenTelemetry context into the standard logging format when
       LoggingInstrumentor is used.
     - Adds trace_id/span_id to every structlog event when inside a recording span
       (request handlers); omits them when no active span or context is invalid (0).
     """
+    if settings is None:
+        settings = Settings()
+    min_level = _log_level_from_name(settings.LOG_LEVEL)
+
     LoggingInstrumentor().instrument(set_logging_format=True)
+
+    # Root logger: so all handlers (including OTLP LoggingHandler) receive
+    # logs at LOG_LEVEL and above (info, warn, error, exception).
+    logging.getLogger().setLevel(min_level)
 
     structlog.configure(
         processors=[
@@ -204,7 +222,7 @@ def configure_logging() -> None:
             structlog.processors.UnicodeDecoder(),
             structlog.processors.JSONRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        wrapper_class=structlog.make_filtering_bound_logger(min_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,

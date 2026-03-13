@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -15,12 +16,19 @@ class Base(DeclarativeBase):
 
 
 def build_engine(settings: Settings):
-    """Create async engine with connection pooling."""
-    return create_async_engine(
+    """Create async engine with connection pooling and OpenTelemetry tracing.
+
+    DB operations (queries, commits) are traced so they appear in Tempo/Grafana
+    as child spans of the request trace.
+    """
+    engine = create_async_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
         echo=settings.ENVIRONMENT == "development",
     )
+    # Instrument the underlying sync engine so async sessions emit trace spans.
+    SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+    return engine
 
 
 def build_session_factory(engine):

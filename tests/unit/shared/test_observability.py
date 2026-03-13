@@ -11,7 +11,9 @@ from app.shared.observability import (
     _build_sampler,
     _build_trace_export_endpoint,
     _inject_trace_context_processor,
+    _log_level_from_name,
     _trace_context_filter,
+    configure_logging,
 )
 
 
@@ -93,3 +95,25 @@ def test_trace_aware_json_formatter_includes_trace_id_when_on_record() -> None:
     assert "span_id" in out
     assert "b" * 16 in out
     assert "hello" in out
+
+
+def test_log_level_from_name() -> None:
+    """LOG_LEVEL string maps to logging constants; unknown defaults to INFO."""
+    assert _log_level_from_name("DEBUG") == logging.DEBUG
+    assert _log_level_from_name("INFO") == logging.INFO
+    assert _log_level_from_name("WARNING") == logging.WARNING
+    assert _log_level_from_name("ERROR") == logging.ERROR
+    assert _log_level_from_name("CRITICAL") == logging.CRITICAL
+    assert _log_level_from_name("unknown") == logging.INFO
+    assert _log_level_from_name("") == logging.INFO
+
+
+def test_configure_logging_sets_root_logger_level_from_settings() -> None:
+    """configure_logging(settings) sets root logger to LOG_LEVEL so Loki gets info/warn/error."""
+    root = logging.getLogger()
+    settings = Settings(LOG_LEVEL="WARNING")
+    configure_logging(settings)
+    assert root.level == logging.WARNING
+    # Restore for other tests that may assume INFO
+    configure_logging(Settings(LOG_LEVEL="INFO"))
+    assert root.level == logging.INFO

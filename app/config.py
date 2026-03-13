@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
 
+    # Logging: minimum level sent to OTLP/Loki (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+    # Default INFO ensures Loki receives info, warn, error, and exception logs.
+    LOG_LEVEL: str = "INFO"
+
     # Fuzzy search
     PG_TRGM_SIMILARITY_THRESHOLD: float = 0.2
     OPENAI_TEMPERATURE: float = 0

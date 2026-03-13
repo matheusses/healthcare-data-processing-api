@@ -5,6 +5,10 @@
 # OTel Collector (via OTLP HTTP), indexes them using TSDB, and exposes a
 # LogQL query API consumed by Grafana.
 # This config runs all Loki components in a single process (monolithic mode).
+#
+# Log levels: the API sends all logs (info, warn, error, exception) to OTLP
+# when LOG_LEVEL=INFO (default). Set LOG_LEVEL=DEBUG to include DEBUG. Loki
+# does not filter by level; it stores whatever the collector forwards.
 
 # Disable multi-tenant authentication — all logs go to the "fake" tenant.
 # Set to true and pass X-Scope-OrgID headers for multi-tenant deployments.

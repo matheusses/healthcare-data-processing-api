@@ -1,4 +1,5 @@
 # Loki: log aggregation. Receives logs from OTel Collector via OTLP.
+# API sends info/warn/error/exception when LOG_LEVEL=INFO; Loki stores all levels received.
 apiVersion: v1
 kind: ConfigMap
 metadata:
