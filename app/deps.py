@@ -7,9 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notes.client import NoteClient
 from app.notes.interfaces.client.notes import INoteClient
+from app.notes.repository import NoteRepository
+from app.notes.service import NoteService
 from app.patients.client import PatientClient
 from app.patients.interfaces.client.patients import IPatientClient
+from app.patients.repository import PatientRepository
+from app.patients.service import PatientService
 from app.shared.db.database import get_db_from_factory
+from app.shared.llm.embeddings import EmbeddingPipeline
 
 
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -21,12 +26,11 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_patient_client(
-    request: Request, session: AsyncSession = Depends(get_db)
+    _: Request, session: AsyncSession = Depends(get_db)
 ) -> IPatientClient:
     """Build PatientClient; session from get_db."""
-    container = request.app.state.container
-    repo = container.patient_repository(session)
-    service = container.patient_service(patient_repository=repo)
+    patient_repository = PatientRepository(session)
+    service = PatientService(patient_repository)
     return PatientClient(service)
 
 
@@ -35,15 +39,10 @@ async def get_note_client(
 ) -> INoteClient:
     """Build NoteClient; session from get_db."""
     container = request.app.state.container
-    note_repo = container.note_repository(session)
-    pacientClient = await get_patient_client(request, session)
-    storage = container.document_storage()
-    embedding_pipeline = container.embedding_pipeline()
-    service = container.note_service(
-        note_repository=note_repo,
-        patient_client=pacientClient,
-        document_storage=storage,
-        embedding_pipeline=embedding_pipeline,
-        session=session,
-    )
+    document_storage = container.document_storage()
+    document_extractor = container.document_extractor()
+    note_repository = NoteRepository(session)
+    embedding_pipeline = EmbeddingPipeline(session)
+    patient_client = await get_patient_client(request, session)
+    service = NoteService(note_repository, patient_client, document_storage, embedding_pipeline, document_extractor)
     return NoteClient(service)

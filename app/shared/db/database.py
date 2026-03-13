@@ -17,9 +17,9 @@ class Base(DeclarativeBase):
 def build_engine(settings: Settings):
     """Create async engine with connection pooling."""
     return create_async_engine(
-        settings.database_url,
+        settings.DATABASE_URL,
         pool_pre_ping=True,
-        echo=settings.environment == "development",
+        echo=settings.ENVIRONMENT == "development",
     )
 
 

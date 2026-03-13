@@ -20,6 +20,7 @@ Modular monolith API for **patients**, **medical notes** (SOAP), and **structure
 uv sync
 cp .env.example .env
 # Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings.
+# For Docker Compose provisioning, you can also set MINIO_ROOT_USER and MINIO_ROOT_PASSWORD.
 ```
 
 For OTLP in local development:
@@ -55,7 +56,7 @@ uv run alembic downgrade -1
 uv run alembic upgrade head --sql
 ```
 
-`pg_trgm` is enabled by migration `656dcd0fa7a3` and is required for ranked fuzzy search on `/patients/`. Migration `a1b2c3d4e5f6` creates the `notes` table; `b2c3d4e5f6a7` enables the `vector` extension and creates the `note_chunks` table (pgvector) for embedding storage. If an environment cannot enable extensions, adjust or skip the vector migration.
+`pg_trgm` is enabled by migration `656dcd0fa7a3` and is required for ranked fuzzy search on `/patients/`. Migration `a1b2c3d4e5f6` creates the `notes` table; `b2c3d4e5f6a7` enables the `vector` extension and creates the `note_chunks` table (pgvector) for embedding storage. **pgvector:** When using Docker Compose, the `postgres` service uses `pgvector/pgvector:pg16` so the extension is available. If you run migrations against a local PostgreSQL (e.g. system-installed), install the [pgvector](https://github.com/pgvector/pgvector) extension on that server first, or migrations will fail at `CREATE EXTENSION vector`.
 
 **Security:** Never commit secrets in migration scripts. Use environment-based config only.
 
@@ -80,7 +81,7 @@ docker compose up -d
 
 The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `POSTGRES_USER` and `POSTGRES_DB=healthcare` so the default user exists (the image creates one role from `POSTGRES_USER`, not from the DB name).
 
-**MinIO (document storage):** With Docker Compose, MinIO runs on port 9000. Set `DOCUMENT_STORAGE_ENDPOINT`, `DOCUMENT_STORAGE_BUCKET`, `DOCUMENT_STORAGE_ACCESS_KEY`, and `DOCUMENT_STORAGE_SECRET_KEY` in `.env` (see `.env.example`). The API uses MinIO for file-backed note uploads (`POST /patients/{id}/notes/upload`).
+**MinIO (document storage):** With Docker Compose, MinIO runs on port 9000 and is provisioned automatically by the `minio-provision` service. It creates the bucket and grants `readwrite` policy to `DOCUMENT_STORAGE_ACCESS_KEY` (if different from root), so the API can upload and create buckets. Set `DOCUMENT_STORAGE_ENDPOINT`, `DOCUMENT_STORAGE_BUCKET`, `DOCUMENT_STORAGE_ACCESS_KEY`, `DOCUMENT_STORAGE_SECRET_KEY` (and optionally `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`) in `.env` (see `.env.example`). The API uses MinIO for file-backed note uploads (`POST /patients/{id}/notes/upload`). Upload accepts `.txt`, `.pdf`, and handwritten/printed images (`.jpg`, `.png`); PDF and images are processed with LangChain (PyPDF, RapidOCR) — no extra system dependencies.
 
 ### Observability troubleshooting
 

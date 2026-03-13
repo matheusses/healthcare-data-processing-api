@@ -18,7 +18,6 @@ router = APIRouter(prefix="/patients", tags=["patients"])
 PatientClientDep = Annotated[IPatientClient, Depends(get_patient_client)]
 
 
-
 @router.get("/", response_model=list[PatientResponse])
 async def list_patients(
     client: PatientClientDep,

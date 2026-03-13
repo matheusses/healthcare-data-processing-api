@@ -6,7 +6,10 @@
 
 # Critical paths — require review from security/backend
 /app/                    @your-org/healthcare-api-maintainers
+/app/notes/              @your-org/healthcare-api-maintainers
+/app/shared/storage/     @your-org/healthcare-api-maintainers
 /docs/adr/               @your-org/healthcare-api-maintainers
+/docs/notes-api.md       @your-org/healthcare-api-maintainers
 CODEOWNERS              @your-org/healthcare-api-maintainers
 
 # Security contact for responsible disclosure (replace with actual contact)

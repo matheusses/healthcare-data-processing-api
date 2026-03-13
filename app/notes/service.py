@@ -3,15 +3,15 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notes.domain import Note
 from app.notes.interfaces.repositories.notes import INoteRepository
 from app.patients.interfaces.client.patients import IPatientClient
-from app.shared.exceptions import NotFoundException
-from app.shared.llm.embeddings import EmbeddingPipeline
+from app.shared.exceptions import DomainException, NotFoundException
+from app.shared.interfaces.document_loading.extractor import IDocumentExtractor
+from app.shared.interfaces.llm.embeddings import IEmbeddingPipeline
+from app.shared.interfaces.storage.document_storage import IDocumentStorage
 from app.shared.schemas.notes import NoteListResponse, NoteResponse
-from app.shared.storage.document_storage import DocumentStorageClient
 
 
 class NoteService:
@@ -21,85 +21,63 @@ class NoteService:
         self,
         note_repository: INoteRepository,
         patient_client: IPatientClient,
-        document_storage: DocumentStorageClient | None = None,
-        embedding_pipeline: EmbeddingPipeline | None = None,
-        session: AsyncSession | None = None,
+        document_storage: IDocumentStorage,
+        embedding_pipeline: IEmbeddingPipeline,
+        document_extractor: IDocumentExtractor,
     ) -> None:
-        self._repo = note_repository
+        self._note_repository = note_repository
         self._patient_client = patient_client
         self._storage = document_storage
         self._embedding_pipeline = embedding_pipeline
-        self._session = session
-
+        self._document_extractor = document_extractor
+    
     async def _ensure_patient_exists(self, patient_id: UUID) -> None:
         patient = await self._patient_client.get_by_id(patient_id)
         if not patient:
             raise NotFoundException("Patient not found")
+        
 
     async def create(
         self,
         patient_id: UUID,
         recorded_at: datetime,
-        content: str,
-        store_in_object_storage: bool = False,
+        raw: bytes,
+        content_type: str,
     ) -> NoteResponse:
         await self._ensure_patient_exists(patient_id)
-        note = await self._repo.create(
-            patient_id=patient_id,
-            recorded_at=recorded_at,
-            content=content,
-            storage_key=None,
-        )
-        if store_in_object_storage and self._storage:
-            try:
-                storage_key = self._storage.upload_note_content(patient_id, note.id, content)
-                note = await self._repo.update_storage_key(note.id, storage_key) or note
-            except Exception:
-                await self._repo.delete(note.id)
-                raise
-        if self._embedding_pipeline and self._embedding_pipeline.is_available() and self._session:
-            try:
-                await self._embedding_pipeline.process_note(self._session, note.id, content)
-            except Exception:
-                pass
-        return self._to_response(note)
-
-    async def get_by_id(self, note_id: UUID) -> NoteResponse:
-        note = await self._repo.get_by_id(note_id)
-        if not note:
-            raise NotFoundException("Note not found")
+        content = await self._document_extractor.extract_text_from_upload(raw, content_type)
+        if not content:
+            raise DomainException("Failed to extract text from file", code="EXTRACTION_ERROR")
+        storage_key = await self._storage.upload(path=f"notes/{patient_id}/{recorded_at.isoformat()}.txt", raw=raw)
+        note = await self._note_repository.create(patient_id, recorded_at, storage_key)
+        await self._embedding_pipeline.process_note(note.id, content)
         return self._to_response(note)
 
     async def list_by_patient(self, patient_id: UUID, limit: int = 100, offset: int = 0) -> NoteListResponse:
         await self._ensure_patient_exists(patient_id)
-        items = await self._repo.list_by_patient(patient_id, limit=limit, offset=offset)
-        total = await self._repo.count_by_patient(patient_id)
+        items = await self._note_repository.list_by_patient(patient_id, limit=limit, offset=offset)
         return NoteListResponse(
             items=[self._to_response(n) for n in items],
-            total=total,
+            total=len(items),
         )
-
+    
     async def delete(self, note_id: UUID) -> None:
-        note = await self._repo.get_by_id(note_id)
+        note = await self._note_repository.get_by_id(note_id)
         if not note:
             raise NotFoundException("Note not found")
-        if self._embedding_pipeline and self._session:
-            try:
-                await self._embedding_pipeline.delete_chunks_for_note(self._session, note_id)
-            except Exception:
-                pass
-        if note.storage_key and self._storage:
-            self._storage.delete_object(note.storage_key)
-        deleted = await self._repo.delete(note_id)
-        if not deleted:
+        await self._embedding_pipeline.delete_note_chunks(note_id)
+        await self._storage.delete(note.storage_key)
+        await self._note_repository.delete(note_id)
+    
+
+    async def generate_pre_signed_url(self, note_id: UUID) -> str:
+        note = await self._note_repository.get_by_id(note_id)
+        if not note:
             raise NotFoundException("Note not found")
+        return await self._storage.generate_pre_signed_url(note.storage_key)
 
     def _to_response(self, note: Note) -> NoteResponse:
         return NoteResponse(
             id=note.id,
-            patient_id=note.patient_id,
-            recorded_at=note.recorded_at,
-            content=note.content,
-            storage_key=note.storage_key,
-            created_at=note.created_at,
+            recorded_at=note.recorded_at
         )

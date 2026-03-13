@@ -247,14 +247,14 @@ def setup_tracer_provider(settings: Settings) -> TracerProvider:
     """
     resource = Resource.create(
         {
-            "service.name": settings.otel_service_name,
-            "deployment.environment": settings.environment,
+            "service.name": settings.OTEL_SERVICE_NAME,
+            "deployment.environment": settings.ENVIRONMENT,
         }
     )
     provider = TracerProvider(resource=resource, sampler=_build_sampler(settings))
 
-    if settings.otel_exporter_otlp_endpoint:
-        trace_endpoint = _build_trace_export_endpoint(settings.otel_exporter_otlp_endpoint)
+    if settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+        trace_endpoint = _build_trace_export_endpoint(settings.OTEL_EXPORTER_OTLP_ENDPOINT)
         if trace_endpoint:
             exporter = OTLPSpanExporter(endpoint=trace_endpoint)
             provider.add_span_processor(BatchSpanProcessor(exporter))
@@ -284,18 +284,18 @@ def setup_logger_provider(settings: Settings) -> LoggerProvider:
     """
     resource = Resource.create(
         {
-            "service.name": settings.otel_service_name,
-            "deployment.environment": settings.environment,
+            "service.name": settings.OTEL_SERVICE_NAME,
+            "deployment.environment": settings.ENVIRONMENT,
         }
     )
     logger_provider = LoggerProvider(resource=resource)
 
-    if settings.otel_exporter_otlp_endpoint:
-        log_endpoint = _build_log_export_endpoint(settings.otel_exporter_otlp_endpoint)
+    if settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+        log_endpoint = _build_log_export_endpoint(settings.OTEL_EXPORTER_OTLP_ENDPOINT)
         if log_endpoint:
             log_exporter = OTLPLogExporter(
                 endpoint=log_endpoint,
-                insecure=settings.otel_exporter_otlp_insecure,
+                insecure=settings.OTEL_EXPORTER_OTLP_INSECURE,
             )
             logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
             set_logger_provider(logger_provider)
@@ -322,8 +322,8 @@ def _build_sampler(settings: Settings) -> Sampler:
     Returns:
         A Sampler instance for the TracerProvider.
     """
-    sampler_name = (settings.otel_traces_sampler or "").lower().strip()
-    ratio = _safe_trace_ratio(settings.otel_traces_sampler_arg)
+    sampler_name = (settings.OTEL_TRACES_SAMPLER or "").lower().strip()
+    ratio = _safe_trace_ratio(settings.OTEL_TRACES_SAMPLER_ARG)
 
     if sampler_name in {"always_on", "alwayson"}:
         return ALWAYS_ON

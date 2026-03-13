@@ -2,24 +2,25 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import io
 import logging
-from uuid import UUID
 
-from app.config import Settings
+from app.config import settings
+from app.shared.interfaces.storage.document_storage import IDocumentStorage
 
 logger = logging.getLogger(__name__)
 
 
-class DocumentStorageClient:
+class DocumentStorageClient(IDocumentStorage):
     """S3-compatible (MinIO) client for storing note files. Bucket created on first use."""
 
-    def __init__(self, settings: Settings) -> None:
-        self._endpoint = settings.document_storage_endpoint
-        self._bucket = settings.document_storage_bucket
-        self._access_key = settings.document_storage_access_key
-        self._secret_key = settings.document_storage_secret_key
-        self._secure = settings.document_storage_secure
+    def __init__(self) -> None:
+        self._endpoint = settings.DOCUMENT_STORAGE_ENDPOINT
+        self._bucket = settings.DOCUMENT_STORAGE_BUCKET
+        self._access_key = settings.DOCUMENT_STORAGE_ACCESS_KEY
+        self._secret_key = settings.DOCUMENT_STORAGE_SECRET_KEY
+        self._secure = settings.DOCUMENT_STORAGE_SECURE
         self._client = None
 
     def _get_client(self):
@@ -42,31 +43,30 @@ class DocumentStorageClient:
             client.make_bucket(self._bucket)
             logger.info("Created bucket %s", self._bucket)
 
-    def upload_note_content(
+    async def upload(
         self,
-        patient_id: UUID,
-        note_id: UUID,
-        content: str,
-        content_type: str = "text/plain",
+        path: str,
+        raw: bytes,
     ) -> str:
-        """Upload note content as object; return storage key (object name)."""
+        """Upload file content as object; return storage key (object name)."""
         self._ensure_bucket()
-        key = f"patients/{patient_id}/notes/{note_id}.txt"
-        data = io.BytesIO(content.encode("utf-8"))
+        key = path
+        data = io.BytesIO(raw)
         client = self._get_client()
         client.put_object(
             self._bucket,
             key,
             data,
-            length=len(content.encode("utf-8")),
-            content_type=content_type,
+            length=len(raw),
         )
         return key
+    
+    async def generate_pre_signed_url(self, storage_key: str) -> str:
+        """Generate a pre-signed URL for a note content object."""
+        client = self._get_client()
+        return client.presigned_get_object(self._bucket, storage_key, expires=timedelta(hours=1))
 
-    def delete_object(self, storage_key: str) -> None:
+    async def delete(self, storage_key: str) -> None:
         """Remove object by storage key."""
         client = self._get_client()
-        try:
-            client.remove_object(self._bucket, storage_key)
-        except Exception as e:
-            logger.warning("Failed to delete object %s: %s", storage_key, e)
+        await client.remove_object(self._bucket, storage_key)

@@ -26,8 +26,9 @@ setup_logger_provider(settings)
 def _domain_exception_handler(request: Request, exc: DomainException):
     from fastapi.responses import JSONResponse
 
+    status_code = 422 if exc.code in ("INVALID_FILE_TYPE", "EXTRACTION_ERROR") else 400
     return JSONResponse(
-        status_code=400,
+        status_code=status_code,
         content={"detail": exc.message, "code": exc.code},
     )
 
@@ -47,9 +48,6 @@ def _not_found_exception_handler(request: Request, exc: NotFoundException):
         status_code=404,
         content={"detail": exc.message},
     )
-
-
-
 
 app = FastAPI(
     title="Healthcare Data Processing API",

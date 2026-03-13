@@ -23,9 +23,9 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("patient_id", sa.UUID(), nullable=False),
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("content", sa.Text(), nullable=False),
         sa.Column("storage_key", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["patient_id"], ["patients.id"], ondelete="CASCADE"),
     )

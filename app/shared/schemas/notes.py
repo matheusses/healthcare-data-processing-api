@@ -17,11 +17,7 @@ class NoteResponse(BaseModel):
     """Response DTO for a single note."""
 
     id: UUID
-    patient_id: UUID
     recorded_at: datetime
-    content: str
-    storage_key: str | None
-    created_at: datetime
 
     model_config = {"from_attributes": True}
 

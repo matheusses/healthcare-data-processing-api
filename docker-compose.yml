@@ -19,21 +19,49 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      minio-provision:
+        condition: service_completed_successfully
 
   minio:
     image: minio/minio:latest
-    command: server /data
+    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio-data:/data
     ports:
       - "9000:9000"
       - "9001:9001"
 
+  minio-provision:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      DOCUMENT_STORAGE_BUCKET: ${DOCUMENT_STORAGE_BUCKET:-patient-notes}
+      DOCUMENT_STORAGE_ACCESS_KEY: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
+      DOCUMENT_STORAGE_SECRET_KEY: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do
+        echo 'Waiting for MinIO...';
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/$$DOCUMENT_STORAGE_BUCKET;
+      if [ \"$$DOCUMENT_STORAGE_ACCESS_KEY\" != \"$$MINIO_ROOT_USER\" ]; then
+        mc admin user add local $$DOCUMENT_STORAGE_ACCESS_KEY $$DOCUMENT_STORAGE_SECRET_KEY || true;
+        mc admin policy attach local readwrite --user $$DOCUMENT_STORAGE_ACCESS_KEY;
+      fi
+      "
+    restart: "no"
+
   postgres:
-    image: postgres:16-alpine
+    # pgvector image required for note_chunks embeddings (vector extension)
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}

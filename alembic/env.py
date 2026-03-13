@@ -25,7 +25,7 @@ if config.config_file_name is not None:
 
 # Use DATABASE_URL from environment (12-factor); override ini if present.
 settings = Settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 target_metadata = Base.metadata
 

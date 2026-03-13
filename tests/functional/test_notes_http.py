@@ -6,6 +6,15 @@ from uuid import uuid4
 import pytest
 
 
+def test_upload_file_missing_returns_422(client):
+    """POST /upload without file returns 422."""
+    r = client.post(
+        f"/patients/{uuid4()}/notes/upload",
+        data={},
+    )
+    assert r.status_code == 422
+
+
 def test_notes_router_mounted(client):
     """Notes routes are registered under patients."""
     r = client.get("/openapi.json")
@@ -87,6 +96,83 @@ def test_upload_list_delete_note_flow(client_with_lifespan):
         # Verify gone
         gr2 = c.get(f"/patients/{patient_id}/notes/{note_id}")
         assert gr2.status_code == 404
+    except Exception as e:
+        if "Connect" in str(e) or "refused" in str(e).lower() or "5434" in str(e):
+            pytest.skip("Database not available")
+        raise
+
+
+@pytest.mark.requires_db
+def test_upload_file_txt_with_optional_recorded_at(client_with_lifespan):
+    """Upload via file: .txt with recorded_at omitted (defaults to now) or provided."""
+    try:
+        c = client_with_lifespan
+        pr = c.post(
+            "/patients/",
+            json={
+                "name": "Upload File Patient",
+                "birth_date": "1985-05-20",
+                "document_number": f"doc-upload-{uuid4()}",
+            },
+        )
+        if pr.status_code >= 500:
+            pytest.skip("DB or app error")
+        assert pr.status_code == 201
+        patient_id = pr.json()["id"]
+
+        # Upload .txt without recorded_at -> 201, recorded_at should be set
+        content_txt = "SOAP: Subjective and Objective note from file."
+        r1 = c.post(
+            f"/patients/{patient_id}/notes/upload",
+            files={"file": ("note.txt", content_txt.encode("utf-8"), "text/plain")},
+            data={},
+        )
+        assert r1.status_code == 201
+        note1 = r1.json()
+        assert note1["content"] == content_txt
+        assert "recorded_at" in note1
+
+        # Upload .txt with recorded_at provided
+        rec = datetime(2024, 1, 15, 14, 30, 0, tzinfo=timezone.utc).isoformat()
+        r2 = c.post(
+            f"/patients/{patient_id}/notes/upload",
+            files={"file": ("note2.txt", b"Second note.", "text/plain")},
+            data={"recorded_at": rec},
+        )
+        assert r2.status_code == 201
+        note2 = r2.json()
+        assert "2024-01-15" in note2["recorded_at"] or "14:30" in note2["recorded_at"]
+    except Exception as e:
+        if "Connect" in str(e) or "refused" in str(e).lower() or "5434" in str(e):
+            pytest.skip("Database not available")
+        raise
+
+
+@pytest.mark.requires_db
+def test_upload_file_disallowed_type_returns_422(client_with_lifespan):
+    """Upload with disallowed file type (.docx) returns 422."""
+    try:
+        c = client_with_lifespan
+        pr = c.post(
+            "/patients/",
+            json={
+                "name": "Disallow File Patient",
+                "birth_date": "1990-01-01",
+                "document_number": f"doc-disallow-{uuid4()}",
+            },
+        )
+        if pr.status_code >= 500:
+            pytest.skip("DB or app error")
+        assert pr.status_code == 201
+        patient_id = pr.json()["id"]
+
+        r = c.post(
+            f"/patients/{patient_id}/notes/upload",
+            files={"file": ("note.docx", b"data", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+            data={},
+        )
+        assert r.status_code == 422
+        assert "detail" in r.json()
     except Exception as e:
         if "Connect" in str(e) or "refused" in str(e).lower() or "5434" in str(e):
             pytest.skip("Database not available")

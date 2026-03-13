@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from uuid import UUID
 
-from app.shared.schemas.notes import NoteCreateRequest, NoteListResponse, NoteResponse
+from app.shared.schemas.notes import NoteListResponse, NoteResponse
 
 
 class INoteClient(ABC):
@@ -15,10 +15,10 @@ class INoteClient(ABC):
         self,
         patient_id: UUID,
         recorded_at: datetime,
-        content: str,
-        store_in_object_storage: bool = False,
+        raw: bytes,
+        content_type: str,
     ) -> NoteResponse:
-        """Create a note (body content). Optionally store raw content in object storage."""
+        """Create a note from a file."""
         ...
 
     @abstractmethod
@@ -27,8 +27,8 @@ class INoteClient(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, note_id: UUID) -> NoteResponse:
-        """Get note by id. Raises NotFoundException if not found."""
+    async def generate_pre_signed_url(self, note_id: UUID) -> str:
+        """Generate a pre-signed URL for a note content object."""
         ...
 
     @abstractmethod

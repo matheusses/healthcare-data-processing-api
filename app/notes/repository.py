@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notes.domain import Note
@@ -26,13 +26,11 @@ class NoteRepository(INoteRepository):
         self,
         patient_id: UUID,
         recorded_at: datetime,
-        content: str,
-        storage_key: str | None = None,
+        storage_key: str,
     ) -> Note:
         model = NoteModel(
             patient_id=patient_id,
             recorded_at=recorded_at,
-            content=content,
             storage_key=storage_key,
         )
         self._session.add(model)
@@ -61,17 +59,4 @@ class NoteRepository(INoteRepository):
         rows = result.scalars().all()
         return [Note.model_validate(row) for row in rows]
 
-    async def count_by_patient(self, patient_id: UUID) -> int:
-        stmt = select(func.count()).select_from(NoteModel).where(NoteModel.patient_id == patient_id)
-        result = await self._session.execute(stmt)
-        return result.scalar_one() or 0
 
-    async def update_storage_key(self, id: UUID, storage_key: str) -> Note | None:
-        result = await self._session.execute(select(NoteModel).where(NoteModel.id == id))
-        model = result.scalar_one_or_none()
-        if not model:
-            return None
-        model.storage_key = storage_key
-        await self._session.flush()
-        await self._session.refresh(model)
-        return Note.model_validate(model)

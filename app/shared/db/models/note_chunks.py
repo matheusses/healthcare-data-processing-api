@@ -26,7 +26,7 @@ class NoteChunkModel(Base):
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(settings.vector_embedding_dimensions),
+        Vector(settings.VECTOR_EMBEDDING_DIMENSIONS),
         nullable=True,
     )
     chunk_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

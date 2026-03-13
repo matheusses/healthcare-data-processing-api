@@ -1,5 +1,6 @@
 """Application settings via Pydantic BaseSettings (12-factor)."""
 
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,33 +13,45 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Database
-    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/healthcare"
+    # Database: when DATABASE_URL is set (e.g. in Docker), it overrides POSTGRES_* components
+    DATABASE_URL: str = ""
+
 
     # OpenTelemetry (empty = disable OTLP export)
-    otel_exporter_otlp_endpoint: str = ""
-    otel_exporter_otlp_insecure: bool = True  # Use TLS when False (recommended in production)
-    otel_service_name: str = "healthcare-api"
-    otel_traces_sampler: str = "parentbased_traceidratio"
-    otel_traces_sampler_arg: str = "1.0"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
+    OTEL_EXPORTER_OTLP_INSECURE: bool = True  # Use TLS when False (recommended in production)
+    OTEL_SERVICE_NAME: str = "healthcare-api"
+    OTEL_TRACES_SAMPLER: str = "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: str = "1.0"
 
     # Environment
-    environment: str = "development"
+    ENVIRONMENT: str = "development"
 
     # Fuzzy search
-    pg_trgm_similarity_threshold: float = 0.2
+    PG_TRGM_SIMILARITY_THRESHOLD: float = 0.2
 
     # Document storage (MinIO / S3-compatible)
-    document_storage_endpoint: str = "http://localhost:9000"
-    document_storage_bucket: str = "patient-notes"
-    document_storage_access_key: str = "minioadmin"
-    document_storage_secret_key: str = "minioadmin"
-    document_storage_region: str = "us-east-1"
-    document_storage_secure: bool = False
+    DOCUMENT_STORAGE_ENDPOINT: str = "http://localhost:9000"
+    DOCUMENT_STORAGE_BUCKET: str = "patient-notes"
+    DOCUMENT_STORAGE_ACCESS_KEY: str = "minioadmin"
+    DOCUMENT_STORAGE_SECRET_KEY: str = "minioadmin"
+    DOCUMENT_STORAGE_REGION: str = "us-east-1"
+    DOCUMENT_STORAGE_SECURE: bool = False
 
     # Vector / embeddings
-    vector_embedding_model: str = "text-embedding-3-small"
-    vector_embedding_dimensions: int = 1536
-    openai_api_key: str = ""
+    VECTOR_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    VECTOR_EMBEDDING_DIMENSIONS: int = 1536
+    OPENAI_API_KEY: str = ""
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
+
+    # Allowed file extensions
+    ALLOWED_CONTENT_TYPES: str = "text/plain, application/pdf, image/jpeg, image/jpg, image/png"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def allowed_content_types_list(self) -> list[str]:
+        return [x.strip() for x in self.ALLOWED_CONTENT_TYPES.split(",")]
+
 
 settings = Settings()
