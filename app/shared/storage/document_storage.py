@@ -1,4 +1,8 @@
-"""Document storage client (S3/MinIO) for file uploads."""
+"""Document storage client (S3/MinIO) for file uploads.
+
+MinIO operations are traced via manual OpenTelemetry spans (no auto-instrumentor
+for the minio SDK). Spans use semantic-like attributes for storage operations.
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,14 @@ from datetime import timedelta
 import io
 import logging
 
-from app.config import settings
-from app.shared.interfaces.storage.document_storage import IDocumentStorage
+from opentelemetry import trace
 from minio import Minio
 
+from app.config import settings
+from app.shared.interfaces.storage.document_storage import IDocumentStorage
+
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__, None)
 
 
 class DocumentStorageClient(IDocumentStorage):
@@ -30,9 +37,12 @@ class DocumentStorageClient(IDocumentStorage):
         )
 
     def _ensure_bucket(self) -> None:
-        if not self._client.bucket_exists(self._bucket):
-            self._client.make_bucket(self._bucket)
-            logger.info("Created bucket %s", self._bucket)
+        with tracer.start_as_current_span("minio.ensure_bucket") as span:
+            span.set_attribute("storage.bucket", self._bucket)
+            span.set_attribute("storage.system", "minio")
+            if not self._client.bucket_exists(self._bucket):
+                self._client.make_bucket(self._bucket)
+                logger.info("Created bucket %s", self._bucket)
 
     async def upload(
         self,
@@ -41,22 +51,35 @@ class DocumentStorageClient(IDocumentStorage):
     ) -> str:
         """Upload file content as object; return storage key (object name)."""
         key = path
-        data = io.BytesIO(raw)
-        self._ensure_bucket()
-        self._client.put_object(
-            self._bucket,
-            key,
-            data,
-            length=len(raw),
-        )
+        with tracer.start_as_current_span("minio.put_object") as span:
+            span.set_attribute("storage.bucket", self._bucket)
+            span.set_attribute("storage.key", key)
+            span.set_attribute("storage.system", "minio")
+            span.set_attribute("storage.object_size", len(raw))
+            data = io.BytesIO(raw)
+            self._ensure_bucket()
+            self._client.put_object(
+                self._bucket,
+                key,
+                data,
+                length=len(raw),
+            )
         return key
 
     async def generate_pre_signed_url(self, storage_key: str) -> str:
         """Generate a pre-signed URL for a note content object."""
-        return self._client.presigned_get_object(
-            self._bucket, storage_key, expires=timedelta(hours=1)
-        )
+        with tracer.start_as_current_span("minio.presigned_get_object") as span:
+            span.set_attribute("storage.bucket", self._bucket)
+            span.set_attribute("storage.key", storage_key)
+            span.set_attribute("storage.system", "minio")
+            return self._client.presigned_get_object(
+                self._bucket, storage_key, expires=timedelta(hours=1)
+            )
 
     async def delete(self, storage_key: str) -> None:
         """Remove object by storage key."""
-        self._client.remove_object(self._bucket, storage_key)
+        with tracer.start_as_current_span("minio.remove_object") as span:
+            span.set_attribute("storage.bucket", self._bucket)
+            span.set_attribute("storage.key", storage_key)
+            span.set_attribute("storage.system", "minio")
+            self._client.remove_object(self._bucket, storage_key)

@@ -1,18 +1,22 @@
 # Apply with: kubectl apply -k deploy/k3s
 # Requires: k3s (or kind) with default storage class. Build API image: docker build -t healthcare-api:local .
 # Observability (otelcol, prometheus, loki, tempo, grafana) is in observability/.
+# Base (namespace, api, postgres, minio) needs configmaps/secrets from development overlay.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: healthcare-api
 
 resources:
-  - namespace.yaml
-  - postgres.yaml
-  - minio.yaml   # Optional: comment out if not using MinIO
+  - ../base
+  # ConfigMaps/Secrets required by base (postgres, api, minio); kept under deploy/k3s for Kustomize root restriction
+  - postgres-configmap.yaml
+  - postgres-secret.yaml
+  - api-configmap.yaml
+  - api-secret.yaml
+  - minio-secret.yaml
   - observability/loki.yaml
   - observability/prometheus.yaml
   - observability/tempo.yaml
   - observability/otelcol.yaml
   - observability/grafana.yaml
-  - api.yaml

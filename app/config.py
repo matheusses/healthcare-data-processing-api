@@ -1,6 +1,6 @@
 """Application settings via Pydantic BaseSettings (12-factor)."""
 
-from pydantic import computed_field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,7 +38,8 @@ class Settings(BaseSettings):
     # Fuzzy search
     PG_TRGM_SIMILARITY_THRESHOLD: float = 0.2
     OPENAI_TEMPERATURE: float = 0
-    OPENAI_TOP_P: float = 1
+    # top_p (nucleus sampling): must be in [0, 1] per OpenAI API
+    OPENAI_TOP_P: float = Field(default=1, ge=0, le=1)
 
     # Document storage (MinIO / S3-compatible)
     DOCUMENT_STORAGE_ENDPOINT: str = "http://localhost:9000"

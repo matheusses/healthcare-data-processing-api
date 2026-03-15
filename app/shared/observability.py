@@ -23,6 +23,10 @@ Instrumentors patch libraries so spans are created automatically. In this app:
   when the engine is built so DB operations appear as child spans.
 - **HTTPX** (optional): applied in :func:`instrument_httpx` so outbound HTTP calls
   (e.g. LLM APIs) are traced. Call once at startup after the TracerProvider is set.
+- **MinIO (manual)**: no auto-instrumentor for the minio SDK; :mod:`app.shared.storage.document_storage`
+  creates manual spans (e.g. ``minio.put_object``, ``minio.remove_object``) with storage attributes.
+- **Notes (manual)**: :mod:`app.notes.service` creates manual spans (e.g. ``notes.create``,
+  ``notes.list_by_patient``) so the full notes flow appears under the request trace.
 
 **LangSmith (LLM tracing):** When ``LANGSMITH_API_KEY`` is set, OpenTelemetry
 traces are also exported to LangSmith's OTEL endpoint (see :func:`setup_tracer_provider`),

@@ -26,7 +26,9 @@ def build_engine(settings: Settings):
         pool_pre_ping=True,
         echo=settings.ENVIRONMENT == "development",
     )
-    SQLAlchemyInstrumentor().instrument(engine)
+    # Instrument the underlying sync engine; the OTel instrumentor listens to sync
+    # engine events (before_cursor_execute, etc.). AsyncEngine runs via sync_engine.
+    SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
     return engine
 
 
