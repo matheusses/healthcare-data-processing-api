@@ -26,8 +26,7 @@ def build_engine(settings: Settings):
         pool_pre_ping=True,
         echo=settings.ENVIRONMENT == "development",
     )
-    # Instrument the underlying sync engine so async sessions emit trace spans.
-    SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+    SQLAlchemyInstrumentor().instrument(engine)
     return engine
 
 
