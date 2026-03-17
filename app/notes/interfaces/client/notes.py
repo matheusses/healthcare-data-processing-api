@@ -39,6 +39,8 @@ class INoteClient(ABC):
         ...
 
     @abstractmethod
-    async def get_note_contents_for_patient(self, patient_id: UUID) -> list[NoteContentItem]:
+    async def get_note_contents_for_patient(
+        self, patient_id: UUID, query: str
+    ) -> list[NoteContentItem]:
         """Return full note text per note for a patient (for summary/chat context)."""
         ...

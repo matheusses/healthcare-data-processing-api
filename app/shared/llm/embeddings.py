@@ -41,3 +41,7 @@ class EmbeddingPipeline(IEmbeddingPipeline):
         embeddings: list[list[float]] = []
         embeddings = await self._embedding.aembed_documents(chunks)
         return embeddings, chunks
+
+    async def embed_query(self, query: str) -> list[float]:
+        """Embed a query and return the embedding."""
+        return await self._embedding.aembed_query(query)

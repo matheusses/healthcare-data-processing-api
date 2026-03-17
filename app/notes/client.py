@@ -39,5 +39,7 @@ class NoteClient(INoteClient):
     async def delete(self, note_id: UUID) -> None:
         await self._service.delete(note_id)
 
-    async def get_note_contents_for_patient(self, patient_id: UUID) -> list[NoteContentItem]:
-        return await self._service.get_note_contents_for_patient(patient_id)
+    async def get_note_contents_for_patient(
+        self, patient_id: UUID, query: str
+    ) -> list[NoteContentItem]:
+        return await self._service.get_note_contents_for_patient(patient_id, query)

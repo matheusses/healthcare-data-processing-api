@@ -60,3 +60,13 @@ class NoteRepository(INoteRepository):
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
         return [Note.model_validate(row) for row in rows]
+
+    async def list_all_by_patient(self, patient_id: UUID) -> list[Note]:
+        stmt = (
+            select(NoteModel)
+            .where(NoteModel.patient_id == patient_id)
+            .order_by(NoteModel.recorded_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        rows = result.scalars().all()
+        return [Note.model_validate(row) for row in rows]

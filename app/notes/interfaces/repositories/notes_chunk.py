@@ -8,8 +8,8 @@ class INoteChunkRepository:
     """Abstract interface for reading note chunks (e.g. for summary/chat context)."""
 
     @abstractmethod
-    async def get_contents_ordered(self, note_id: UUID) -> list[str]:
-        """Return chunk content strings for a note, ordered by chunk_index."""
+    async def get_contents_ordered(self, note_id: UUID, query: str) -> list[str]:
+        """Return chunk content strings for a note, ordered by chunk_index, filtered by query."""
         ...
 
     @abstractmethod

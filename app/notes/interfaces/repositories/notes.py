@@ -36,3 +36,8 @@ class INoteRepository:
     ) -> list[Note]:
         """List notes for a patient ordered by recorded_at desc."""
         ...
+
+    @abstractmethod
+    async def list_all_by_patient(self, patient_id: UUID) -> list[Note]:
+        """Get all notes for a patient ordered by recorded_at desc."""
+        ...

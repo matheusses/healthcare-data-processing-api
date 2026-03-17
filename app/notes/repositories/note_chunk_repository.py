@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.notes.interfaces.repositories.notes_chunk import INoteChunkRepository
 from app.shared.db.models.note_chunks import NoteChunkModel
 from app.shared.interfaces.llm.embeddings import IEmbeddingPipeline
+from app.config import settings
 
 
 class NoteChunkRepository(INoteChunkRepository):
@@ -17,11 +18,16 @@ class NoteChunkRepository(INoteChunkRepository):
         self._session = session
         self._embedding_pipeline = embedding_pipeline
 
-    async def get_contents_ordered(self, note_id: UUID) -> list[str]:
+    async def get_contents_ordered(self, note_id: UUID, content: str) -> list[str]:
         """Return chunk content strings for a note, ordered by chunk_index."""
+        query_embedding = await self._embedding_pipeline.embed_query(content)
         stmt = (
             select(NoteChunkModel.content)
             .where(NoteChunkModel.note_id == note_id)
+            .where(
+                NoteChunkModel.embedding.cosine_distance(query_embedding)
+                < (1.0 - settings.PG_TRGM_SIMILARITY_THRESHOLD)
+            )
             .order_by(text("(chunk_metadata->>'chunk_index')::int nulls last"))
         )
         result = await self._session.execute(stmt)

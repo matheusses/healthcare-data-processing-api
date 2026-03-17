@@ -54,7 +54,7 @@ class SummaryService:
         patient = await self._patient_client.get_by_id(patient_id)
         if not patient:
             raise NotFoundException("Patient not found")
-        note_items = await self._note_client.get_note_contents_for_patient(patient_id)
+        note_items = await self._note_client.get_note_contents_for_patient(patient_id, query="*")
         heading = PatientHeading(
             name=patient.name,
             age=_age_from_birth_date(patient.birth_date),

@@ -78,15 +78,17 @@ class NoteService:
             raise NotFoundException("Note not found")
         return await self._storage.generate_pre_signed_url(note.storage_key)
 
-    async def get_note_contents_for_patient(self, patient_id: UUID) -> list[NoteContentItem]:
+    async def get_note_contents_for_patient(
+        self, patient_id: UUID, query: str
+    ) -> list[NoteContentItem]:
         """Return full note text per note for a patient (chunks ordered by chunk_index). Reused by summary/chat."""
         await self._ensure_patient_exists(patient_id)
         if not self._note_chunk_repository:
             return []
-        notes = await self._note_repository.list_by_patient(patient_id, limit=500, offset=0)
+        notes = await self._note_repository.list_all_by_patient(patient_id)
         result: list[NoteContentItem] = []
         for note in notes:
-            chunks = await self._note_chunk_repository.get_contents_ordered(note.id)
+            chunks = await self._note_chunk_repository.get_contents_ordered(note.id, query)
             result.append(
                 NoteContentItem(note_id=note.id, content="\n\n".join(chunks) if chunks else "")
             )

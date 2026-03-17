@@ -23,7 +23,7 @@ class MockNoteClient:
     def __init__(self, note_items: list[NoteContentItem] | None = None):
         self._note_items = note_items or []
 
-    async def get_note_contents_for_patient(self, patient_id):
+    async def get_note_contents_for_patient(self, patient_id, query: str):
         return self._note_items
 
 
