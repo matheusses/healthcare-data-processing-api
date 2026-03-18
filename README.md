@@ -50,7 +50,7 @@ Then open **http://localhost:8000/docs**. Prerequisites: k3s (or kind/k3d), kube
 ```bash
 uv sync
 cp .env.example .env
-# Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings and for summary/chat (OPENAI_SUMMARY_MODEL, OPENAI_CHAT_MODEL).
+# Edit .env: set DATABASE_URL (PostgreSQL), DOCUMENT_STORAGE_* (S3/MinIO), and optionally OTEL_*, OPENAI_API_KEY for embeddings and for summary/chat (OPENAI_SUMMARY_MODEL, OPENAI_CHAT_MODEL).
 # For Docker Compose provisioning, you can also set MINIO_ROOT_USER and MINIO_ROOT_PASSWORD.
 ```
 
@@ -116,7 +116,7 @@ docker compose up -d
 
 The Postgres healthcheck uses `POSTGRES_USER` (e.g. `user`); ensure `.env` has `POSTGRES_USER` and `POSTGRES_DB=healthcare` so the default user exists (the image creates one role from `POSTGRES_USER`, not from the DB name). The API container runs as a **non-root user** (see Dockerfile); documented in [Task 004](docs/tasks/004-containerization-and-deployment.md).
 
-**MinIO (document storage):** With Docker Compose, MinIO runs on port 9000 and is provisioned automatically by the `minio-provision` service. It creates the bucket and grants `readwrite` policy to `DOCUMENT_STORAGE_ACCESS_KEY` (if different from root), so the API can upload and create buckets. Set `DOCUMENT_STORAGE_ENDPOINT`, `DOCUMENT_STORAGE_BUCKET`, `DOCUMENT_STORAGE_ACCESS_KEY`, `DOCUMENT_STORAGE_SECRET_KEY` (and optionally `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`) in `.env` (see `.env.example`). The API uses MinIO for file-backed note uploads (`POST /patients/{id}/notes/upload`). Upload accepts `.txt`, `.pdf`, and handwritten/printed images (`.jpg`, `.png`); PDF and images are processed with LangChain (PyPDF, RapidOCR) — no extra system dependencies.
+**MinIO (document storage):** With Docker Compose, MinIO runs on port 9000 and is provisioned automatically by the `minio-provision` service. It creates the bucket and grants `readwrite` policy to `DOCUMENT_STORAGE_ACCESS_KEY` (if different from root), so the API can upload and create buckets. Set `DOCUMENT_STORAGE_ENDPOINT`, `DOCUMENT_STORAGE_BUCKET`, `DOCUMENT_STORAGE_ACCESS_KEY`, `DOCUMENT_STORAGE_SECRET_KEY`, `DOCUMENT_STORAGE_REGION` (and optionally `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`) in `.env` (see `.env.example`). The API talks to MinIO via the S3 API using `aiobotocore` for file-backed note uploads (`POST /patients/{id}/notes/upload`). Upload accepts `.txt`, `.pdf`, and handwritten/printed images (`.jpg`, `.png`); PDF and images are processed with LangChain (PyPDF, RapidOCR) — no extra system dependencies.
 
 ### Observability troubleshooting
 
